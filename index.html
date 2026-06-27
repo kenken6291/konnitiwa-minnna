@@ -1519,14 +1519,10 @@ window.addEventListener("keyup", e => {
   if (dir) moveDir[dir] = 0;
 });
 
-// ウィンドウ・タブ切替でリセット（focusoutは削除）
+// ウィンドウ・タブ切替でリセット
+// ※ window.focus は削除（getUserMedia許可ダイアログ閉じ時に誤動作するため）
 window.addEventListener("blur",    resetMove);
 document.addEventListener("visibilitychange", resetMove);
-// focus時はmoveDirのみリセット（vpadKeysはそのまま）
-window.addEventListener("focus", () => {
-  moveDir.up = moveDir.down = moveDir.left = moveDir.right = 0;
-  dashOn = false;
-});
 // INPUTにフォーカスが入った時だけリセット
 document.addEventListener("focusin", () => {
   if (isMovementBlocked()) resetMove();
@@ -1656,11 +1652,10 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (!tileMap) return;
 
-  // ── 移動 ────────────────────────────────────────────────────
-  if (!isMovementBlocked()) {
+  // ── 移動（フォーカス中・getUserMedia中は完全停止）──────────────
+  if (!isMovementBlocked() && !gumPending) {
     const spd = dashOn ? CFG.DASH_SPD : CFG.MOVE_SPD;
     let dx = 0, dy = 0;
-    // キーボード
     if (moveDir.up    || vpadKeys.has("up"))    dy -= 1;
     if (moveDir.down  || vpadKeys.has("down"))  dy += 1;
     if (moveDir.left  || vpadKeys.has("left"))  dx -= 1;
@@ -1672,8 +1667,8 @@ function loop(now) {
     resetMove();
   }
 
-  // ── 送信 ────────────────────────────────────────────────────
-  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL) {
+  // ── 送信（gumPending中は送信しない）────────────────────────────
+  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL && !gumPending) {
     ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
     lastSend = now;
   }
@@ -2048,9 +2043,15 @@ document.getElementById("passcode-copy").addEventListener("click", () => {
 //  [R] WebRTC 近接通話
 // ══════════════════════════════════════════════════════════════════
 
+// getUserMedia取得中フラグ（この間は移動・キー入力を止める）
+let gumPending = false;
+
 // ── ローカルストリーム取得 ─────────────────────────────────────────
 async function ensureLocalStream() {
   if (localStream) return localStream;
+  if (gumPending)  return null;  // 重複取得防止
+  gumPending = true;
+  resetMove();   // 取得開始時に移動停止
   try {
     showToast("📷 カメラ・マイクの許可をお願いします…");
     localStream = await navigator.mediaDevices.getUserMedia({
@@ -2069,6 +2070,9 @@ async function ensureLocalStream() {
     console.warn("getUserMedia失敗:", e);
     showToast("⚠️ カメラ/マイクが使えません。ブラウザの許可を確認してください");
     localStream = null;
+  } finally {
+    gumPending = false;
+    resetMove();  // 取得完了後も移動停止（許可ダイアログ中の入力を捨てる）
   }
   return localStream;
 }
