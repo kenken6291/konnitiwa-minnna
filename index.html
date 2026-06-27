@@ -1006,16 +1006,27 @@ let   localStream = null;        // 自分のカメラ+マイク
 let   micEnabled  = true;
 let   camEnabled  = true;
 const CALL_RANGE  = 500;         // 通話開始距離 px（server.jsと合わせる）
-const TURN_URLS   = [];          // Metered.ca 等のTURNサーバー設定（任意）
+const TURN_URLS   = [];
 
-// ICE設定（STUNのみで動作、TURNは任意追加）
+// ICE設定（STUN + Metered.ca TURN）
 const RTC_CONFIG = {
   iceServers: [
+    // STUN
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
-    // TURNサーバーを使う場合は下記を追加
-    // { urls:"turn:xxxx.metered.live:80", username:"xxx", credential:"xxx" },
+    // TURN（Metered.ca virtual-office-kenken6291）
+    {
+      urls: [
+        "turn:global.relay.metered.ca:80",
+        "turn:global.relay.metered.ca:80?transport=tcp",
+        "turn:global.relay.metered.ca:443",
+        "turn:global.relay.metered.ca:443?transport=tcp",
+      ],
+      username:   "4fd77f32dd58e9321f5956af",
+      credential: "3ul1x9zBN/zboKMJ",
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 // ── GAS HTTP ユーティリティ ─────────────────────────────────────
@@ -1931,20 +1942,22 @@ document.getElementById("passcode-copy").addEventListener("click", () => {
 async function ensureLocalStream() {
   if (localStream) return localStream;
   try {
+    showToast("📷 カメラ・マイクの許可をお願いします…");
     localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true, video: { width:320, height:240, facingMode:"user" },
+      audio: true,
+      video: { width:320, height:240, facingMode:"user" },
     });
-    // 自分のプレビュー表示
     const myTile  = document.getElementById("my-video-tile");
     const myVideo = document.getElementById("my-video");
     document.getElementById("my-video-nick").textContent = myNick;
     myVideo.srcObject = localStream;
     myTile.style.display = "block";
-    // マイク・カメラの初期状態を反映
     localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
     localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
+    showToast("✅ カメラ・マイク準備完了");
   } catch (e) {
-    showToast("⚠️ カメラ/マイクの取得に失敗しました");
+    console.warn("getUserMedia失敗:", e);
+    showToast("⚠️ カメラ/マイクが使えません。ブラウザの許可を確認してください");
     localStream = null;
   }
   return localStream;
@@ -1957,9 +1970,9 @@ function checkCallRange(prevIds) {
     if (Math.hypot(p.x - myX, p.y - myY) < CALL_RANGE) inRange.add(id);
   });
 
-  // 範囲内で未接続 → call開始
+  // 範囲内で未接続 → call開始（ID文字列比較で片側だけofferを出す）
   inRange.forEach(id => {
-    if (!peerConns.has(id) && id > myId) callPeer(id);
+    if (!peerConns.has(id) && myId < id) callPeer(id);
   });
 
   // 範囲外になった → 切断
@@ -1974,6 +1987,10 @@ function checkCallRange(prevIds) {
 async function callPeer(peerId) {
   const stream = await ensureLocalStream();
   if (!stream) return;
+
+  const peer = others.get(peerId);
+  const nick = peer ? peer.nick : peerId;
+  showToast(`📞 ${nick} さんと通話を開始します…`);
 
   const pc = createPC(peerId);
   stream.getTracks().forEach(t => pc.addTrack(t, stream));
