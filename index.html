@@ -1462,58 +1462,78 @@ function buildMap(wW, wH) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  入力管理（シンプルなフラグ方式）
+//  入力管理
 // ══════════════════════════════════════════════════════════════════
 
-// 移動を止める条件：任意のinput/textarea/button等にフォーカス中
-function isMovementBlocked() {
-  const tag = document.activeElement?.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "SELECT";
-}
-
-// 押下中キーを管理するSet
 const keys     = new Set();
 const vpadKeys = new Set();
 
+// チャット欄・モーダル等にフォーカス中かどうか
+function isMovementBlocked() {
+  const el  = document.activeElement;
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA"
+      || tag === "BUTTON" || tag === "SELECT"
+      || el.closest(".modal-overlay") !== null;  // モーダル内要素も対象
+}
+
+// ── キーボード ────────────────────────────────────────────────────
 window.addEventListener("keydown", e => {
-  if (isMovementBlocked()) return;           // フォーカス中は無視
-  keys.add(e.key);
+  // フォーカス中は追加しない
+  if (isMovementBlocked()) {
+    keys.clear();
+    return;
+  }
+  // Enterはチャット欄にフォーカスするだけ（keysには追加しない）
   if (e.key === "Enter") {
-    // Enterでチャット欄にフォーカス（ゲームへのキー追加は上でブロック済み）
+    e.preventDefault();
     const ci = document.getElementById("chat-input");
-    if (ci) { e.preventDefault(); ci.focus(); }
+    if (ci) ci.focus();
     return;
   }
   if (e.key.startsWith("Arrow")) e.preventDefault();
+  keys.add(e.key);
 });
 
-window.addEventListener("keyup",   e => keys.delete(e.key));
-window.addEventListener("blur",    ()  => keys.clear());           // ウィンドウ非アクティブ
-window.addEventListener("focus",   ()  => keys.clear());           // 戻った時もクリア
-document.addEventListener("visibilitychange", () => keys.clear()); // タブ切替
+window.addEventListener("keyup", e => keys.delete(e.key));
 
-// バーチャルパッド（ゲーム開始後に初期化するため関数化）
+// ウィンドウ・タブの状態変化で全クリア
+["blur","focus"].forEach(ev =>
+  window.addEventListener(ev, () => keys.clear())
+);
+document.addEventListener("visibilitychange", () => keys.clear());
+
+// フォーカス変化を監視して確実にクリア
+document.addEventListener("focusin", () => {
+  if (isMovementBlocked()) keys.clear();
+});
+
+// ── バーチャルパッド（ゲーム開始後に初期化） ─────────────────────
 function initVpad() {
   [
-    ["vp-up","ArrowUp"],["vp-down","ArrowDown"],
-    ["vp-left","ArrowLeft"],["vp-right","ArrowRight"],
+    ["vp-up",    "ArrowUp"],
+    ["vp-down",  "ArrowDown"],
+    ["vp-left",  "ArrowLeft"],
+    ["vp-right", "ArrowRight"],
   ].forEach(([elId, key]) => {
     const el = document.getElementById(elId);
     if (!el) return;
     const on  = () => { if (!isMovementBlocked()) vpadKeys.add(key); };
     const off = () => vpadKeys.delete(key);
-    el.addEventListener("pointerdown",  on);
-    el.addEventListener("pointerup",    off);
-    el.addEventListener("pointerleave", off);
-    el.addEventListener("pointercancel",off);
+    el.addEventListener("pointerdown",   on);
+    el.addEventListener("pointerup",     off);
+    el.addEventListener("pointerleave",  off);
+    el.addEventListener("pointercancel", off);
   });
 }
 
-// チャット送信
+// ── チャット ─────────────────────────────────────────────────────
 document.getElementById("chat-send").addEventListener("click", sendChat);
 document.getElementById("chat-input").addEventListener("keydown", e => {
-  if (e.key === "Enter") { e.preventDefault(); sendChat(); }
-  if (e.key === "Escape") { e.preventDefault(); document.getElementById("chat-input").blur(); keys.clear(); }
+  e.stopPropagation();   // ゲームのkeydownに伝播させない
+  if (e.key === "Enter")  { e.preventDefault(); sendChat(); }
+  if (e.key === "Escape") { e.preventDefault(); document.getElementById("chat-input").blur(); }
 });
 
 function sendChat() {
