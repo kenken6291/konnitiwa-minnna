@@ -1334,7 +1334,7 @@ function _doConnect() {
       const sender = others.get(m.from);
       const cx = sender ? sender.x : m.x;
       const cy = sender ? sender.y : m.y;
-      spawnBubble(m.from, m.nick, m.avatar, m.text, cx, cy);
+      spawnBubble(m.from, m.nick, m.avatar, m.text);
     }
 
     if (m.type === "rtc_offer")  handleOffer(m);
@@ -1519,14 +1519,17 @@ window.addEventListener("keyup", e => {
   if (dir) moveDir[dir] = 0;
 });
 
-// ウィンドウ・タブ切替・フォーカス変化で全リセット
+// ウィンドウ・タブ切替でリセット（focusoutは削除）
 window.addEventListener("blur",    resetMove);
-window.addEventListener("focus",   resetMove);
 document.addEventListener("visibilitychange", resetMove);
-document.addEventListener("focusin",  () => { if (isMovementBlocked()) resetMove(); });
-document.addEventListener("focusout", () => {
-  // INPUTからフォーカスが外れた直後もリセット
-  setTimeout(resetMove, 0);
+// focus時はmoveDirのみリセット（vpadKeysはそのまま）
+window.addEventListener("focus", () => {
+  moveDir.up = moveDir.down = moveDir.left = moveDir.right = 0;
+  dashOn = false;
+});
+// INPUTにフォーカスが入った時だけリセット
+document.addEventListener("focusin", () => {
+  if (isMovementBlocked()) resetMove();
 });
 
 // ── バーチャルパッド（ゲーム開始後に初期化） ─────────────────────
@@ -1564,7 +1567,7 @@ function sendChat() {
   inp.blur();
   if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
-  spawnBubble(myId, myNick, myAvatar, text, myX, myY);
+  spawnBubble(myId, myNick, myAvatar, text);
   gasPost({
     action: "chat_log", user_id: gasUserId,
     nick: myNick, avatar: myAvatar,
@@ -1629,7 +1632,7 @@ function clientSanitize(s, maxLen) {
     .slice(0, maxLen);
 }
 
-function spawnBubble(id, nick, avatar, text, wx, wy) {
+function spawnBubble(id, nick, avatar, text) {
   // 同じ id の古い吹き出しを削除
   const old = bubbles.findIndex(b => b.id === id);
   if (old !== -1) {
@@ -1638,10 +1641,10 @@ function spawnBubble(id, nick, avatar, text, wx, wy) {
   }
   const el = document.createElement("div");
   el.className = "bubble";
-  // [F-XSS] textContentで安全に挿入（HTMLエスケープ不要）
   el.textContent = `${avatar} ${clientSanitize(nick,16)}: ${clientSanitize(text,60)}`;
   document.getElementById("bubbles").appendChild(el);
-  bubbles.push({ el, wx, wy, born: performance.now(), id });
+  // wx/wyは保存しない。毎フレームidから解決する
+  bubbles.push({ el, id, born: performance.now() });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1985,17 +1988,16 @@ function updateBubbles(vw, vh, now) {
       : 1;
     b.el.style.opacity = alpha.toFixed(2);
 
-    // 自分の吹き出し → myX/myY で追従
-    // 相手の吹き出し → othersの最新座標で追従（移動しても吹き出しが付いてくる）
-    let wx = b.wx, wy = b.wy;
+    // idから毎フレーム座標を解決（固定座標を持たない）
+    let wx, wy;
     if (b.id === myId) {
       wx = myX; wy = myY;
     } else {
       const peer = others.get(b.id);
       if (peer) { wx = peer.x; wy = peer.y; }
+      else { b.el.style.opacity = "0"; continue; } // 相手が見えない間は非表示
     }
 
-    // ワールド座標 → スクリーン座標
     const sx = wx - camX;
     const sy = wy - camY - CFG.PLAYER_R - 54;
     b.el.style.left = (sx - 100) + "px";
