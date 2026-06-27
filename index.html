@@ -662,6 +662,35 @@ canvas#world { display: block; }
   opacity: .8;
 }
 
+/* ── 通話モーダル ── */
+#call-modal .modal-card { max-width: 360px; gap: 14px; }
+.nearby-list { display: flex; flex-direction: column; gap: 8px; }
+.nearby-item {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.nearby-avatar { font-size: 1.8rem; }
+.nearby-info   { flex: 1; }
+.nearby-nick   { font-size: .9rem; font-weight: 700; color: var(--text); }
+.nearby-dist   { font-size: .72rem; color: var(--text-dim); margin-top: 2px; }
+.nearby-call-btn {
+  background: linear-gradient(135deg, #4acf80, #2a9f60);
+  border: none; border-radius: var(--radius);
+  color: #fff; font-size: .85rem; font-weight: 700;
+  padding: 8px 14px; cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .2s;
+}
+.nearby-call-btn:hover   { opacity: .85; }
+.nearby-call-btn.calling { background: linear-gradient(135deg,#e86060,#c03030); }
+.no-nearby {
+  text-align: center; color: var(--text-dim);
+  font-size: .85rem; padding: 20px 0;
+}
+
 /* ── 退出ボタン ── */
 #btn-exit {
   background: rgba(180,40,40,0.15);
@@ -865,6 +894,7 @@ canvas#world { display: block; }
     <button class="hud-btn" id="btn-badge">🪪 名札</button>
     <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
     <button class="hud-btn" id="btn-show-code">🔑 コード</button>
+    <button class="hud-btn" id="btn-call">📞 通話</button>
     <button class="hud-btn" id="btn-exit">🚪 退出</button>
   </div>
 
@@ -911,7 +941,16 @@ canvas#world { display: block; }
     </div>
   </div>
 
-  <!-- ══ 退出確認モーダル ════════════════════════════════════════ -->
+  <!-- ══ 通話モーダル ══════════════════════════════════════════ -->
+  <div id="call-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>📞 通話する <button class="modal-close" id="call-modal-close">✕</button></h2>
+      <div style="font-size:.78rem;color:var(--text-dim)">
+        近くにいる人（500px以内）に発信できます
+      </div>
+      <div class="nearby-list" id="nearby-list"></div>
+    </div>
+  </div>
   <div id="exit-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <div class="exit-icon">🚪</div>
@@ -989,7 +1028,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -2100,9 +2139,143 @@ async function ensureLocalStream() {
 const callingPeers = new Set();
 
 function checkCallRange(prevIds) {
-  // 自動通話は無効化（手動で通話ボタンを押す方式に変更）
+  // 通話が切れた相手（範囲外）は自動切断
+  if (peerConns.size > 0) {
+    peerConns.forEach((pc, id) => {
+      const peer = others.get(id);
+      if (!peer || Math.hypot(peer.x - myX, peer.y - myY) > CALL_RANGE * 1.5) {
+        hangupPeer(id);
+      }
+    });
+  }
   updateCallBar();
 }
+
+// ── 通話モーダル ─────────────────────────────────────────────────
+function openCallModal() {
+  buildNearbyList();
+  document.getElementById("call-modal").classList.remove("hidden");
+}
+function closeCallModal() {
+  document.getElementById("call-modal").classList.add("hidden");
+}
+
+function buildNearbyList() {
+  const list = document.getElementById("nearby-list");
+  list.innerHTML = "";
+
+  const nearby = [];
+  others.forEach((p, id) => {
+    const dist = Math.hypot(p.x - myX, p.y - myY);
+    if (dist <= CALL_RANGE) nearby.push({ ...p, dist });
+  });
+  nearby.sort((a, b) => a.dist - b.dist);
+
+  if (nearby.length === 0) {
+    list.innerHTML = `<div class="no-nearby">
+      近くに人がいません<br>
+      <span style="font-size:.72rem">500px以内に近づいてください</span>
+    </div>`;
+    return;
+  }
+
+  nearby.forEach(p => {
+    const isCalling  = peerConns.has(p.id);
+    const isCPending = callingPeers.has(p.id);
+    const item = document.createElement("div");
+    item.className = "nearby-item";
+    item.id = `nearby-${p.id}`;
+
+    const btnLabel = isCalling  ? "📵 切断"
+                   : isCPending ? "⏳ 発信中…"
+                   : "📞 発信";
+    const btnClass = isCalling || isCPending ? "calling" : "";
+
+    item.innerHTML = `
+      <div class="nearby-avatar">${p.avatar || "👤"}</div>
+      <div class="nearby-info">
+        <div class="nearby-nick">${p.nick || p.id}</div>
+        <div class="nearby-dist">距離 ${Math.floor(p.dist)}px</div>
+      </div>
+      <button class="nearby-call-btn ${btnClass}"
+              data-id="${p.id}" ${isCPending ? "disabled" : ""}>
+        ${btnLabel}
+      </button>
+    `;
+
+    const btn = item.querySelector(".nearby-call-btn");
+    btn.addEventListener("click", async () => {
+      if (peerConns.has(p.id)) {
+        // 通話中 → 切断
+        hangupPeer(p.id);
+        showToast(`📵 ${p.nick} さんとの通話を切断しました`);
+        buildNearbyList();   // ← モーダルを閉じずに再描画
+      } else if (!callingPeers.has(p.id)) {
+        // 未通話 → 発信（モーダルは閉じない）
+        callingPeers.add(p.id);
+        buildNearbyList();   // ← 「発信中…」に更新
+        try {
+          await callPeer(p.id);
+        } finally {
+          callingPeers.delete(p.id);
+          buildNearbyList(); // ← 発信完了後に再描画
+        }
+      }
+    });
+    list.appendChild(item);
+  });
+
+  // 全員に一括発信・全員切断ボタン
+  const connected = nearby.filter(p => peerConns.has(p.id));
+  const notConn   = nearby.filter(p => !peerConns.has(p.id) && !callingPeers.has(p.id));
+
+  if (nearby.length >= 2) {
+    const bar = document.createElement("div");
+    bar.style.cssText = "display:flex;gap:8px;margin-top:4px";
+
+    if (notConn.length >= 2) {
+      const allBtn = document.createElement("button");
+      allBtn.className = "btn-enter";
+      allBtn.style.cssText = "flex:1;font-size:.82rem;padding:10px";
+      allBtn.textContent = `📞 全員に発信（${notConn.length}人）`;
+      allBtn.addEventListener("click", async () => {
+        for (const p of notConn) {
+          if (!callingPeers.has(p.id) && !peerConns.has(p.id)) {
+            callingPeers.add(p.id);
+          }
+        }
+        buildNearbyList();
+        for (const p of notConn) {
+          try { await callPeer(p.id); }
+          catch {}
+          finally { callingPeers.delete(p.id); }
+        }
+        buildNearbyList();
+      });
+      bar.appendChild(allBtn);
+    }
+
+    if (connected.length >= 2) {
+      const hangBtn = document.createElement("button");
+      hangBtn.style.cssText = "flex:1;font-size:.82rem;padding:10px;background:rgba(220,80,80,0.2);border:1px solid #e86060;border-radius:8px;color:#f08080;cursor:pointer;font-family:var(--font)";
+      hangBtn.textContent = `📵 全員切断（${connected.length}人）`;
+      hangBtn.addEventListener("click", () => {
+        connected.forEach(p => hangupPeer(p.id));
+        showToast("📵 全員との通話を切断しました");
+        buildNearbyList();
+      });
+      bar.appendChild(hangBtn);
+    }
+
+    if (bar.children.length > 0) list.appendChild(bar);
+  }
+}
+
+document.getElementById("btn-call").addEventListener("click", openCallModal);
+document.getElementById("call-modal-close").addEventListener("click", closeCallModal);
+document.getElementById("call-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("call-modal")) closeCallModal();
+});
 
 // ── Offerを送る（Callerサイド） ────────────────────────────────────
 async function callPeer(peerId) {
