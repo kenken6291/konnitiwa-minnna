@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>こんにちは、みんな</title>
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   デザイントークン
+   テーマ：昭和の縁側・温かみある和モダン
+   ─ 空の青と畳の緑を軸に、提灯の橙がアクセント
+══════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+:root {
+  /* パレット */
+  --sora:     #2c4a7c;   /* 藍空 */
+  --sora-lt:  #3d6699;   /* 薄藍 */
+  --tatami:   #1a2e1a;   /* 畳の緑（暗） */
+  --tatami-lt:#253a20;   /* 畳の緑（明） */
+  --chochin:  #e8924a;   /* 提灯の橙 */
+  --chochin2: #f0c84a;   /* 黄橙 */
+  --shoji:    #f4efe6;   /* 障子の白 */
+  --ink:      #1a1610;   /* 墨 */
+  --yoru:     #0e1218;   /* 夜空（背景） */
+  --panel:    rgba(14,18,24,0.92);
+  --border:   rgba(232,146,74,0.25);
+  --text:     #ddd8cc;
+  --text-dim: #7a7060;
+  --radius:   10px;
+  --font:     'Noto Sans JP', 'Hiragino Kaku Gothic Pro', sans-serif;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+
+body {
+  background: var(--yoru);
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+  width: 100vw; height: 100vh;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ログイン画面
+══════════════════════════════════════════════════════════════════ */
+#login {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--yoru);
+  /* 星空風グラデ */
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(44,74,124,0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(26,46,26,0.5) 0%, transparent 50%);
+}
+
+/* 提灯アニメ */
+.lantern-row {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; justify-content: space-around;
+  padding: 0 24px;
+  pointer-events: none;
+}
+.lantern {
+  font-size: 2.4rem;
+  animation: swing 3s ease-in-out infinite;
+  transform-origin: top center;
+  opacity: 0.7;
+}
+.lantern:nth-child(2) { animation-delay: .4s; }
+.lantern:nth-child(3) { animation-delay: .8s; }
+.lantern:nth-child(4) { animation-delay: 1.2s; }
+.lantern:nth-child(5) { animation-delay: 1.6s; }
+@keyframes swing {
+  0%,100% { transform: rotate(-6deg); }
+  50%      { transform: rotate( 6deg); }
+}
+
+.login-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 40px 44px;
+  width: min(440px, 92vw);
+  display: flex; flex-direction: column; gap: 22px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 48px rgba(0,0,0,0.6);
+  position: relative; z-index: 1;
+}
+
+.login-title {
+  text-align: center;
+  line-height: 1.2;
+}
+.login-title .main {
+  display: block;
+  font-size: 2rem; font-weight: 900;
+  color: var(--chochin);
+  letter-spacing: .08em;
+  text-shadow: 0 0 20px rgba(232,146,74,0.5);
+}
+.login-title .sub {
+  display: block;
+  font-size: .8rem;
+  color: var(--text-dim);
+  margin-top: 4px;
+  letter-spacing: .12em;
+}
+
+/* アバター選択 */
+.avatar-row {
+  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+}
+.avatar-btn {
+  width: 52px; height: 52px;
+  font-size: 1.6rem;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-btn:hover   { background: rgba(232,146,74,0.12); border-color: var(--chochin); }
+.avatar-btn.selected{ background: rgba(232,146,74,0.2);  border-color: var(--chochin); transform: scale(1.1); }
+
+.field-wrap { display: flex; flex-direction: column; gap: 6px; }
+.field-wrap label { font-size: .75rem; color: var(--text-dim); letter-spacing: .06em; }
+.field-wrap input {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: .95rem;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color .2s;
+  width: 100%;
+}
+.field-wrap input:focus { border-color: var(--chochin); }
+
+.btn-enter {
+  background: linear-gradient(135deg, var(--chochin), var(--chochin2));
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1.05rem; font-weight: 700;
+  border: none; border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  letter-spacing: .1em;
+  transition: opacity .2s, transform .1s;
+  box-shadow: 0 4px 20px rgba(232,146,74,0.35);
+}
+.btn-enter:hover  { opacity: .88; }
+.btn-enter:active { transform: scale(.97); }
+
+.login-note {
+  font-size: .72rem; color: var(--text-dim); text-align: center;
+}
+#login-err { color: #e86060; font-size: .78rem; min-height: 1em; text-align: center; }
+
+/* ══════════════════════════════════════════════════════════════════
+   ゲームビュー
+══════════════════════════════════════════════════════════════════ */
+#game { display: none; position: fixed; inset: 0; }
+canvas#world { display: block; }
+
+/* ── HUD 左上 ── */
+#hud {
+  position: fixed; top: 12px; left: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  font-size: .74rem; color: var(--text-dim);
+  pointer-events: none; z-index: 100;
+  line-height: 1.9;
+  min-width: 140px;
+}
+.hud-val { color: var(--chochin); font-weight: 700; }
+
+/* ── 接続バナー 右上 ── */
+#banner {
+  position: fixed; top: 12px; right: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  font-size: .76rem; z-index: 200;
+  transition: color .3s, border-color .3s;
+}
+#banner.ok   { color: #4acf80; border-color: #4acf80; }
+#banner.err  { color: #e86060; border-color: #e86060; }
+#banner.wait { color: var(--text-dim); }
+
+/* ── ミニマップ 右下 ── */
+#mm-wrap {
+  position: fixed; bottom: 16px; right: 16px; z-index: 100;
+}
+#mm-wrap canvas {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.mm-label {
+  font-size: .62rem; color: var(--text-dim);
+  text-align: right; margin-top: 3px; letter-spacing: .06em;
+}
+
+/* ── レーダー矢印 ── */
+.radar {
+  position: fixed;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px 4px 8px;
+  font-size: .7rem; color: var(--chochin2);
+  pointer-events: none; z-index: 200;
+  white-space: nowrap;
+  transition: opacity .3s;
+  font-weight: 700;
+}
+
+/* ── チャット吹き出し群（Canvas外DOM） ── */
+#bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
+.bubble {
+  position: absolute;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px 12px 12px 2px;
+  padding: 6px 12px;
+  font-size: .82rem; color: var(--shoji);
+  max-width: 200px; word-break: break-all;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  white-space: pre-wrap;
+  animation: bubblePop .25s ease-out;
+  pointer-events: none;
+}
+@keyframes bubblePop {
+  from { transform: scale(.7) translateY(6px); opacity:0; }
+  to   { transform: scale(1)  translateY(0);   opacity:1; }
+}
+
+/* ── チャット入力欄 ── */
+#chat-wrap {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; align-items: center;
+  z-index: 300; width: min(480px, 92vw);
+}
+#chat-input {
+  flex: 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: .9rem;
+  padding: 10px 16px;
+  outline: none;
+  transition: border-color .2s;
+}
+#chat-input:focus { border-color: var(--chochin); }
+#chat-input::placeholder { color: var(--text-dim); }
+#chat-send {
+  background: linear-gradient(135deg, var(--chochin), var(--chochin2));
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: .9rem; font-weight: 700;
+  border: none; border-radius: var(--radius);
+  padding: 10px 18px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .2s;
+}
+#chat-send:hover { opacity: .85; }
+
+/* ── 操作ヒント ── */
+#hint {
+  position: fixed; bottom: 64px; left: 16px;
+  font-size: .67rem; color: var(--text-dim);
+  line-height: 2; pointer-events: none; z-index: 100;
+}
+.key {
+  display: inline-block;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: .62rem;
+  color: var(--text);
+}
+
+/* ── バーチャルパッド（モバイル用） ── */
+#vpad {
+  position: fixed; bottom: 64px; right: 16px;
+  z-index: 300; display: none;
+}
+.vpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows:    repeat(3, 48px);
+  gap: 4px;
+}
+.vpad-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; touch-action: none;
+  transition: background .1s;
+  -webkit-user-select: none;
+}
+.vpad-btn:active { background: rgba(232,146,74,0.25); }
+@media (hover: none) and (pointer: coarse) {
+  #vpad { display: block; }
+  #hint { display: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HUD ボタン群（名札・ワープ）
+══════════════════════════════════════════════════════════════════ */
+#hud-btns {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; z-index: 200;
+}
+.hud-btn {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: .82rem; font-weight: 700;
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: border-color .2s, background .2s;
+  white-space: nowrap;
+}
+.hud-btn:hover { border-color: var(--chochin); background: rgba(232,146,74,0.1); }
+
+/* ══════════════════════════════════════════════════════════════════
+   モーダル共通（名札・ワープで共用）
+══════════════════════════════════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 800;
+  background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+  animation: fadeIn .18s ease-out;
+}
+.modal-overlay.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 28px 32px;
+  width: min(480px, 94vw);
+  display: flex; flex-direction: column; gap: 20px;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.7);
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-card h2 {
+  font-size: 1.1rem; font-weight: 900;
+  color: var(--chochin);
+  letter-spacing: .06em;
+  display: flex; align-items: center; gap: 8px;
+}
+.modal-close {
+  margin-left: auto;
+  background: none; border: none;
+  color: var(--text-dim); font-size: 1.2rem;
+  cursor: pointer; padding: 0 4px;
+  transition: color .2s;
+}
+.modal-close:hover { color: var(--text); }
+
+/* ── 名札モーダル固有 ── */
+.badge-preview {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  text-align: center;
+  min-height: 72px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+}
+.badge-preview .pv-title {
+  font-size: 1.2rem;
+  color: var(--chochin2);
+  font-weight: 900;
+}
+.badge-preview .pv-tags {
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+}
+.badge-preview .pv-tag {
+  background: rgba(44,74,124,0.5);
+  border: 1px solid rgba(74,150,230,0.35);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: .72rem;
+  color: #8ab8f0;
+}
+
+/* 称号リスト */
+.title-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 8px;
+}
+.title-opt {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: .8rem;
+  transition: border-color .15s, background .15s;
+  text-align: center; line-height: 1.4;
+}
+.title-opt:hover   { border-color: var(--chochin); background: rgba(232,146,74,0.08); }
+.title-opt.selected{ border-color: var(--chochin2); background: rgba(240,200,74,0.12); color: var(--chochin2); }
+
+/* 趣味タグ */
+.hobby-grid {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.hobby-opt {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-size: .78rem;
+  transition: border-color .15s, background .15s;
+}
+.hobby-opt:hover    { border-color: var(--sora-lt); background: rgba(44,74,124,0.2); }
+.hobby-opt.selected { border-color: #4a96e6; background: rgba(44,74,124,0.45); color: #8ab8f0; }
+.hobby-limit-note { font-size: .68rem; color: var(--text-dim); }
+
+/* ── ワープモーダル固有 ── */
+.warp-list {
+  display: flex; flex-direction: column; gap: 10px;
+}
+.warp-btn {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 14px;
+  transition: border-color .15s, background .15s, transform .1s;
+  text-align: left;
+}
+.warp-btn:hover { border-color: var(--chochin); background: rgba(232,146,74,0.08); transform: translateX(3px); }
+.warp-btn:active{ transform: translateX(1px) scale(.99); }
+.warp-icon { font-size: 2rem; flex-shrink: 0; }
+.warp-info { flex: 1; }
+.warp-name { font-size: .95rem; font-weight: 700; color: var(--text); }
+.warp-desc { font-size: .72rem; color: var(--text-dim); margin-top: 2px; }
+.warp-tag  {
+  font-size: .65rem;
+  background: rgba(44,74,124,0.4);
+  border: 1px solid rgba(74,150,230,0.3);
+  border-radius: 999px;
+  padding: 2px 8px; color: #8ab8f0;
+}
+
+/* ── トースト通知 ── */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 22px;
+  font-size: .82rem; color: var(--chochin2);
+  z-index: 900; pointer-events: none;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity .3s;
+}
+#toast.show { opacity: 1; }
+
+/* ── ワープ演出オーバーレイ ── */
+#warp-veil {
+  position: fixed; inset: 0; z-index: 700;
+  background: radial-gradient(circle, rgba(232,146,74,0.6) 0%, rgba(14,18,24,0) 70%);
+  pointer-events: none; opacity: 0;
+  transition: opacity .25s;
+}
+#warp-veil.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ログイン画面
+══════════════════════════════════════════════════════════════════ -->
+<div id="login">
+  <div class="lantern-row">
+    <span class="lantern">🏮</span>
+    <span class="lantern">🏮</span>
+    <span class="lantern">🏮</span>
+    <span class="lantern">🏮</span>
+    <span class="lantern">🏮</span>
+  </div>
+
+  <div class="login-card">
+    <div class="login-title">
+      <span class="main">こんにちは、みんな</span>
+      <span class="sub">1000 人が集える広場へようこそ</span>
+    </div>
+
+    <!-- アバター選択 -->
+    <div>
+      <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px;letter-spacing:.06em">アバターを選んでください</div>
+      <div class="avatar-row" id="avatar-row">
+        <button class="avatar-btn selected" data-av="👴">👴</button>
+        <button class="avatar-btn" data-av="👵">👵</button>
+        <button class="avatar-btn" data-av="🧑">🧑</button>
+        <button class="avatar-btn" data-av="👩">👩</button>
+        <button class="avatar-btn" data-av="👨">👨</button>
+        <button class="avatar-btn" data-av="🧓">🧓</button>
+        <button class="avatar-btn" data-av="🐱">🐱</button>
+        <button class="avatar-btn" data-av="🐶">🐶</button>
+        <button class="avatar-btn" data-av="🦊">🦊</button>
+        <button class="avatar-btn" data-av="🐼">🐼</button>
+      </div>
+    </div>
+
+    <div class="field-wrap">
+      <label>ニックネーム（最大16文字）</label>
+      <input id="nick-inp" type="text" maxlength="16" placeholder="例）田中さん、花子さん" autocomplete="off">
+    </div>
+
+    <div class="field-wrap">
+      <label>サーバー URL</label>
+      <input id="srv-inp" type="text" value="ws://localhost:8080" placeholder="ws://...">
+    </div>
+
+    <button class="btn-enter" id="btn-enter">🏮 広場へ入る</button>
+    <div id="login-err"></div>
+    <div class="login-note">
+      ↑↓←→ または WASD キーで移動 ／ チャットで話しかけましょう
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     ゲームビュー
+══════════════════════════════════════════════════════════════════ -->
+<div id="game">
+  <canvas id="world"></canvas>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div>🌐 オンライン <span class="hud-val" id="h-online">0</span> 人</div>
+    <div>👁 描画中 <span class="hud-val" id="h-vis">0</span> 人</div>
+    <div>📍 <span id="h-pos">-,-</span></div>
+  </div>
+
+  <!-- 接続バナー -->
+  <div id="banner" class="wait">接続中…</div>
+
+  <!-- チャット吹き出し -->
+  <div id="bubbles"></div>
+
+  <!-- ミニマップ -->
+  <div id="mm-wrap">
+    <canvas id="minimap" width="160" height="128"></canvas>
+    <div class="mm-label">ミニマップ</div>
+  </div>
+
+  <!-- チャット入力 -->
+  <div id="chat-wrap">
+    <input id="chat-input" type="text" maxlength="60" placeholder="メッセージを入力…（Enterで送信）" autocomplete="off">
+    <button id="chat-send">送る</button>
+  </div>
+
+  <!-- 操作ヒント -->
+  <div id="hint">
+    <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> / 矢印 — 移動<br>
+    <span class="key">Shift</span> — 速く移動<br>
+    <span class="key">Enter</span> — チャット
+  </div>
+
+  <!-- バーチャルパッド（スマホ） -->
+  <div id="vpad">
+    <div class="vpad-grid">
+      <div></div>
+      <div class="vpad-btn" id="vp-up">↑</div>
+      <div></div>
+      <div class="vpad-btn" id="vp-left">←</div>
+      <div class="vpad-btn" id="vp-center">●</div>
+      <div class="vpad-btn" id="vp-right">→</div>
+      <div></div>
+      <div class="vpad-btn" id="vp-down">↓</div>
+      <div></div>
+    </div>
+  </div>
+
+  <!-- HUD ボタン群 -->
+  <div id="hud-btns">
+    <button class="hud-btn" id="btn-badge">🪪 名札</button>
+    <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
+  </div>
+
+  <!-- ワープ演出ベール -->
+  <div id="warp-veil"></div>
+
+  <!-- トースト -->
+  <div id="toast"></div>
+
+  <!-- ══ 名札モーダル ══════════════════════════════════════════ -->
+  <div id="badge-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>🪪 名札カスタム <button class="modal-close" id="badge-close">✕</button></h2>
+
+      <!-- プレビュー -->
+      <div>
+        <div style="font-size:.72rem;color:var(--text-dim);margin-bottom:8px;letter-spacing:.06em">プレビュー</div>
+        <div class="badge-preview">
+          <div class="pv-title" id="pv-title">（称号なし）</div>
+          <div class="pv-tags" id="pv-tags"></div>
+        </div>
+      </div>
+
+      <!-- 称号選択 -->
+      <div>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px;letter-spacing:.06em">称号を選ぶ（1つ）</div>
+        <div class="title-grid" id="title-grid"></div>
+      </div>
+
+      <!-- 趣味タグ -->
+      <div>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:6px;letter-spacing:.06em">
+          趣味タグを選ぶ（最大3つ）
+          <span class="hobby-limit-note" id="hobby-note">　0 / 3 選択中</span>
+        </div>
+        <div class="hobby-grid" id="hobby-grid"></div>
+      </div>
+
+      <!-- 保存 -->
+      <button class="btn-enter" id="badge-save" style="font-size:.95rem;padding:12px">✅ 名札を更新する</button>
+    </div>
+  </div>
+
+  <!-- ══ ワープモーダル ══════════════════════════════════════════ -->
+  <div id="warp-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>🌀 どこへ行きますか？ <button class="modal-close" id="warp-close">✕</button></h2>
+      <div class="warp-list" id="warp-list"></div>
+    </div>
+  </div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     JavaScript
+══════════════════════════════════════════════════════════════════ -->
+<script>
+"use strict";
+// ══════════════════════════════════════════════════════════════════
+//  設定定数
+// ══════════════════════════════════════════════════════════════════
+const CFG = {
+  MOVE_SPD:      4,       // 通常移動速度 px/frame
+  DASH_SPD:      9,       // ダッシュ速度
+  PLAYER_R:      20,      // アバター半径
+  NICK_SHOW:     260,     // ニック表示距離 px
+  NICK_FULL:     160,     // ニック不透明距離 px
+  VP_PAD:        200,     // カリング余白 px
+  SEND_INTERVAL: 50,      // ms（位置送信間隔）
+  BUBBLE_TTL:    5000,    // チャット吹き出し寿命 ms
+  TILE:          100,     // タイルサイズ px
+  // ▼ GAS デプロイURL（デプロイ後に書き換える）
+  GAS_URL: "",
+};
+
+// ══════════════════════════════════════════════════════════════════
+//  状態
+// ══════════════════════════════════════════════════════════════════
+let ws     = null;
+let myId   = null;
+let myX    = 0, myY = 0;
+let myNick = "", myAvatar = "👴";
+let worldW = 10000, worldH = 8000;
+let totalOnline = 0;
+let tileMap     = null;   // { map, cols, rows }
+
+// 名札カスタム情報
+const myProfile = {
+  title: "",        // 称号（例："🌸 花見名人"）
+  hobbies: [],      // 趣味タグ（最大3個）
+};
+
+// GAS連携
+let gasUserId    = localStorage.getItem("konnitiwa_uid") || "";
+let sessionStart = 0;   // 入室時刻（ms）
+
+// ── GAS HTTP ユーティリティ ─────────────────────────────────────
+// GASはCORSの制限があるため no-cors で fire-and-forget（記録目的）
+// ユーザー登録/読み込みは通常fetchでGETを使用
+async function gasPost(body) {
+  if (!CFG.GAS_URL || CFG.GAS_URL.includes("YOUR_DEPLOYMENT")) return;
+  try {
+    await fetch(CFG.GAS_URL, {
+      method: "POST",
+      mode:   "no-cors",   // GAS側でCORSヘッダーを設定できないため
+      headers: { "Content-Type": "text/plain" },
+      body:    JSON.stringify(body),
+    });
+  } catch (e) { /* 記録失敗は無視 */ }
+}
+
+async function gasGet(params) {
+  if (!CFG.GAS_URL || CFG.GAS_URL.includes("YOUR_DEPLOYMENT")) return null;
+  try {
+    const q   = new URLSearchParams(params).toString();
+    const res = await fetch(`${CFG.GAS_URL}?${q}`);
+    return await res.json();
+  } catch { return null; }
+}
+
+// ── エリア名判定（チャットログ記録用）────────────────────────────
+function getAreaName(x, y) {
+  for (const spot of WARP_SPOTS) {
+    if (Math.hypot(x - spot.x, y - spot.y) < 800) return spot.name;
+  }
+  return "その他";
+}
+
+const others = new Map(); // id -> {x,y,nick,avatar}
+const bubbles = [];       // {el, x, y, born, id}
+
+// カメラ（左上ワールド座標）
+let camX = 0, camY = 0;
+
+// 入力
+const keys = new Set();
+const vpadKeys = new Set();  // バーチャルパッド
+
+// レーダーDOM
+const radarEls = {};
+
+// ══════════════════════════════════════════════════════════════════
+//  ログイン UI
+// ══════════════════════════════════════════════════════════════════
+let selectedAvatar = "👴";
+
+document.querySelectorAll(".avatar-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".avatar-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedAvatar = btn.dataset.av;
+  });
+});
+
+document.getElementById("btn-enter").addEventListener("click", doEnter);
+document.getElementById("nick-inp").addEventListener("keydown", e => {
+  if (e.key === "Enter") doEnter();
+});
+
+function doEnter() {
+  const rawNick = document.getElementById("nick-inp").value.trim();
+  const srv     = document.getElementById("srv-inp").value.trim();
+
+  // [F-INPUT] ニックネームのサニタイズ
+  const nick = clientSanitize(rawNick, 16);
+  if (!nick) {
+    document.getElementById("login-err").textContent = "ニックネームを入力してください（記号・制御文字は使用できません）";
+    return;
+  }
+
+  // [F-INPUT] サーバーURLの簡易検証（ws:// または wss:// のみ）
+  if (!/^wss?:\/\/.+/.test(srv)) {
+    document.getElementById("login-err").textContent = "サーバーURLは ws:// または wss:// で始まる必要があります";
+    return;
+  }
+
+  myNick   = nick;
+  myAvatar = selectedAvatar;
+  document.getElementById("login-err").textContent = "データを確認中…";
+  document.getElementById("btn-enter").disabled = true;
+  gasRegisterAndEnter(nick, selectedAvatar, srv);
+}
+
+// [F-INPUT] UUID v4 形式の検証（localStorageの値が改ざんされていた場合に備える）
+function isValidUUID(s) {
+  return typeof s === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
+}
+
+async function gasRegisterAndEnter(nick, avatar, srv) {
+  // [F-INPUT] localStorageのuser_idがUUID形式でなければ破棄
+  if (gasUserId && !isValidUUID(gasUserId)) {
+    gasUserId = "";
+    localStorage.removeItem("konnitiwa_uid");
+  }
+
+  // 既存ユーザーの名札を読み込む
+  if (gasUserId) {
+    const loaded = await gasGet({ action: "load_user", user_id: gasUserId });
+    if (loaded && loaded.ok && loaded.user) {
+      const u = loaded.user;
+      if (u.nick === nick) {
+        myProfile.title   = u.title   || "";
+        myProfile.hobbies = u.hobbies || [];
+      }
+    }
+  }
+
+  // ローカルでUUID生成（crypto.randomUUID を優先）
+  if (!gasUserId) {
+    gasUserId = (typeof crypto !== "undefined" && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+          const r = Math.random() * 16 | 0;
+          return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+    localStorage.setItem("konnitiwa_uid", gasUserId);
+  }
+
+  // GASに登録/更新
+  gasPost({
+    action:   "register",
+    user_id:  gasUserId,
+    nick, avatar,
+    title:    myProfile.title,
+    hobbies:  myProfile.hobbies,
+  });
+
+  document.getElementById("btn-enter").disabled = false;
+  connect(srv);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  WebSocket
+// ══════════════════════════════════════════════════════════════════
+function connect(url) {
+  document.getElementById("login-err").textContent = "接続中…";
+  try { ws = new WebSocket(url); }
+  catch (e) {
+    document.getElementById("login-err").textContent = "URL エラー: " + e.message;
+    return;
+  }
+
+  ws.onopen = () => {
+    setBanner("接続完了 ✓", "ok");
+    ws.send(JSON.stringify({ type: "profile", nick: myNick, avatar: myAvatar }));
+  };
+
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch { return; }
+
+    if (m.type === "init") {
+      myId   = m.id;
+      myX    = m.x; myY = m.y;
+      worldW = m.worldW; worldH = m.worldH;
+      tileMap = buildMap(worldW, worldH);
+      initRadar();
+      sessionStart = Date.now();
+      document.getElementById("login").style.display = "none";
+      document.getElementById("game").style.display  = "block";
+      resizeCanvas();
+      requestAnimationFrame(loop);
+
+      // GAS：入室ログ
+      gasPost({
+        action: "access_log", user_id: gasUserId,
+        nick: myNick, event: "join",
+        session_min: 0, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+      });
+    }
+
+    if (m.type === "snapshot") {
+      totalOnline = m.total;
+      others.clear();
+      m.players.forEach(p => {
+        if (p.id !== myId) others.set(p.id, p);
+        // profile情報も含めて保持（title, hobbies）
+      });
+    }
+
+    if (m.type === "chat") {
+      spawnBubble(m.id, m.nick, m.avatar, m.text, m.x, m.y);
+    }
+  };
+
+  ws.onclose = () => {
+    setBanner("切断されました。再読み込みしてください", "err");
+    // GAS：退室ログ
+    const sessionMin = sessionStart
+      ? Math.floor((Date.now() - sessionStart) / 60000) : 0;
+    gasPost({
+      action: "access_log", user_id: gasUserId,
+      nick: myNick, event: "leave",
+      session_min: sessionMin, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+    });
+  };
+  ws.onerror = () => setBanner("接続エラー", "err");
+}
+
+function setBanner(txt, cls) {
+  const b = document.getElementById("banner");
+  b.textContent = txt; b.className = cls;
+}
+
+// タブ/ブラウザ閉じ時の退室ログ（sendBeacon使用）
+window.addEventListener("beforeunload", () => {
+  if (!sessionStart || !CFG.GAS_URL.includes("script.google.com")) return;
+  const sessionMin = Math.floor((Date.now() - sessionStart) / 60000);
+  const body = JSON.stringify({
+    action: "access_log", user_id: gasUserId,
+    nick: myNick, event: "leave",
+    session_min: sessionMin, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+  });
+  navigator.sendBeacon(CFG.GAS_URL, new Blob([body], { type: "text/plain" }));
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  マップ生成（決定論的・和風テーマ）
+// ══════════════════════════════════════════════════════════════════
+const T = { ROAD:0, GROUND:1, PARK:2, WATER:3, STONE:4 };
+
+// タイルカラー（Canvas塗り）
+const TILE_BASE = {
+  [T.ROAD]:  "#1c2030",
+  [T.GROUND]:"#141e12",
+  [T.PARK]:  "#1a2e14",
+  [T.WATER]: "#0e1e30",
+  [T.STONE]: "#1e1c22",
+};
+const TILE_ACCENT = {
+  [T.ROAD]:  "#252c40",
+  [T.GROUND]:"#1e2a18",
+  [T.PARK]:  "#243a1c",
+  [T.WATER]: "#122440",
+  [T.STONE]: "#2a2830",
+};
+
+function buildMap(wW, wH) {
+  const TILE = CFG.TILE;
+  const cols = Math.ceil(wW / TILE);
+  const rows = Math.ceil(wH / TILE);
+  const map  = Array.from({ length: rows }, () => new Array(cols).fill(T.GROUND));
+
+  const ROAD_STEP = 8;    // 8 タイルごとに道路
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      // 道路グリッド
+      if (r % ROAD_STEP === 0 || c % ROAD_STEP === 0) {
+        map[r][c] = T.ROAD; continue;
+      }
+      // ブロック内座標
+      const br = r % ROAD_STEP, bc = c % ROAD_STEP;
+      // 中央 3×3 → 公園
+      if (br >= 3 && br <= 5 && bc >= 3 && bc <= 5) {
+        map[r][c] = T.PARK; continue;
+      }
+      // 石畳エリア（ブロック右下コーナー）
+      if (br >= 6 && bc >= 6) { map[r][c] = T.STONE; continue; }
+    }
+  }
+
+  // 大きな川（横）
+  const riverR = Math.floor(rows * 0.42);
+  for (let c = 0; c < cols; c++) {
+    for (let d = 0; d < 2; d++) {
+      const rr = riverR + d;
+      if (rr < rows && map[rr][c] !== T.ROAD) map[rr][c] = T.WATER;
+    }
+  }
+  // 縦の小川
+  const streamC = Math.floor(cols * 0.68);
+  for (let r = 0; r < rows; r++) {
+    if (map[r][streamC] !== T.ROAD) map[r][streamC] = T.WATER;
+  }
+
+  return { map, cols, rows };
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  入力
+// ══════════════════════════════════════════════════════════════════
+window.addEventListener("keydown", e => {
+  keys.add(e.key);
+  // チャット欄フォーカス時はゲーム入力を無視
+  if (document.activeElement === document.getElementById("chat-input")) return;
+  if (e.key === "Enter") {
+    document.getElementById("chat-input").focus();
+  }
+  e.key.startsWith("Arrow") && e.preventDefault();
+});
+window.addEventListener("keyup",   e => keys.delete(e.key));
+
+// バーチャルパッド
+[
+  ["vp-up","ArrowUp"],["vp-down","ArrowDown"],
+  ["vp-left","ArrowLeft"],["vp-right","ArrowRight"],
+].forEach(([id, key]) => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const on  = () => vpadKeys.add(key);
+  const off = () => vpadKeys.delete(key);
+  el.addEventListener("pointerdown", on);
+  el.addEventListener("pointerup",   off);
+  el.addEventListener("pointerleave",off);
+});
+
+// チャット送信
+document.getElementById("chat-send").addEventListener("click", sendChat);
+document.getElementById("chat-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") { e.preventDefault(); sendChat(); }
+  if (e.key === "Escape") document.getElementById("chat-input").blur();
+});
+
+function sendChat() {
+  const inp  = document.getElementById("chat-input");
+  // [F-INPUT] 送信前にサニタイズ
+  const text = clientSanitize(inp.value, 60);
+  if (!text || !ws || ws.readyState !== 1) { inp.value = ""; return; }
+  ws.send(JSON.stringify({ type: "chat", text }));
+  spawnBubble(myId, myNick, myAvatar, text, myX, myY);
+  gasPost({
+    action: "chat_log", user_id: gasUserId,
+    nick: myNick, avatar: myAvatar,
+    message: text,
+    x: Math.floor(myX), y: Math.floor(myY),
+    area: getAreaName(myX, myY),
+  });
+  inp.value = "";
+  inp.blur();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  Canvas
+// ══════════════════════════════════════════════════════════════════
+const canvas = document.getElementById("world");
+const ctx    = canvas.getContext("2d");
+const mmCv   = document.getElementById("minimap");
+const mmCtx  = mmCv.getContext("2d");
+
+function resizeCanvas() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+
+// ══════════════════════════════════════════════════════════════════
+//  レーダー初期化
+// ══════════════════════════════════════════════════════════════════
+function initRadar() {
+  const cfg = {
+    N: "top:60px;left:50%;transform:translateX(-50%)",
+    S: "bottom:60px;left:50%;transform:translateX(-50%)",
+    W: "left:60px;top:50%;transform:translateY(-50%)",
+    E: "right:60px;top:50%;transform:translateY(-50%)",
+  };
+  Object.entries(cfg).forEach(([dir, style]) => {
+    const el = document.createElement("div");
+    el.className = "radar";
+    el.style.cssText = style + ";opacity:0";
+    document.body.appendChild(el);
+    radarEls[dir] = el;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  吹き出し
+// ══════════════════════════════════════════════════════════════════
+// [F-XSS] テキストのみ安全にエスケープ（innerHTML不使用）
+function escapeText(s) {
+  return String(s)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// [F-INPUT] クライアント側サニタイズ（制御文字・HTML除去）
+function clientSanitize(s, maxLen) {
+  return String(s)
+    .replace(/[\u0000-\u001F\u007F<>&"'`]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
+
+function spawnBubble(id, nick, avatar, text, wx, wy) {
+  // 同じ id の古い吹き出しを削除
+  const old = bubbles.findIndex(b => b.id === id);
+  if (old !== -1) {
+    bubbles[old].el.remove();
+    bubbles.splice(old, 1);
+  }
+  const el = document.createElement("div");
+  el.className = "bubble";
+  // [F-XSS] textContentで安全に挿入（HTMLエスケープ不要）
+  el.textContent = `${avatar} ${clientSanitize(nick,16)}: ${clientSanitize(text,60)}`;
+  document.getElementById("bubbles").appendChild(el);
+  bubbles.push({ el, wx, wy, born: performance.now(), id });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  メインループ
+// ══════════════════════════════════════════════════════════════════
+let lastSend = 0;
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (!tileMap) return;
+
+  // ── 移動 ────────────────────────────────────────────────────
+  const chatFocused = document.activeElement === document.getElementById("chat-input");
+  if (!chatFocused) {
+    const allKeys = k => keys.has(k) || vpadKeys.has(k);
+    const spd = keys.has("Shift") ? CFG.DASH_SPD : CFG.MOVE_SPD;
+    let dx = 0, dy = 0;
+    if (allKeys("ArrowUp")   || allKeys("w") || allKeys("W")) dy -= 1;
+    if (allKeys("ArrowDown") || allKeys("s") || allKeys("S")) dy += 1;
+    if (allKeys("ArrowLeft") || allKeys("a") || allKeys("A")) dx -= 1;
+    if (allKeys("ArrowRight")|| allKeys("d") || allKeys("D")) dx += 1;
+    if (dx && dy) { dx *= 0.707; dy *= 0.707; }
+    myX = Math.max(0, Math.min(worldW, myX + dx * spd));
+    myY = Math.max(0, Math.min(worldH, myY + dy * spd));
+  }
+
+  // ── 送信 ────────────────────────────────────────────────────
+  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL) {
+    ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
+    lastSend = now;
+  }
+
+  // ── カメラ ──────────────────────────────────────────────────
+  const vw = canvas.width, vh = canvas.height;
+  camX = Math.max(0, Math.min(worldW - vw, myX - vw / 2));
+  camY = Math.max(0, Math.min(worldH - vh, myY - vh / 2));
+
+  // ── 描画 ────────────────────────────────────────────────────
+  draw(vw, vh, now);
+  drawMinimap();
+  updateRadar(vw, vh);
+  updateBubbles(vw, vh, now);
+  updateHUD();
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  描画
+// ══════════════════════════════════════════════════════════════════
+function draw(vw, vh, now) {
+  ctx.clearRect(0, 0, vw, vh);
+
+  const TILE = CFG.TILE;
+  const { map, cols, rows } = tileMap;
+
+  // ── タイル（カリング） ───────────────────────────────────────
+  const sc = Math.max(0, Math.floor(camX / TILE));
+  const ec = Math.min(cols - 1, Math.ceil((camX + vw) / TILE));
+  const sr = Math.max(0, Math.floor(camY / TILE));
+  const er = Math.min(rows - 1, Math.ceil((camY + vh) / TILE));
+
+  for (let r = sr; r <= er; r++) {
+    for (let c = sc; c <= ec; c++) {
+      const t  = map[r][c];
+      const sx = c * TILE - camX, sy = r * TILE - camY;
+      ctx.fillStyle = TILE_BASE[t];
+      ctx.fillRect(sx, sy, TILE, TILE);
+
+      // タイル別装飾
+      ctx.fillStyle = TILE_ACCENT[t];
+      switch(t) {
+        case T.GROUND:
+          // 建物シルエット（均一なブロック感）
+          ctx.fillRect(sx+6, sy+6, TILE-12, TILE-12);
+          break;
+        case T.PARK:
+          // 木（小円 4本）
+          [[0.25,0.25],[0.75,0.25],[0.25,0.75],[0.75,0.75]].forEach(([rx,ry])=>{
+            ctx.beginPath();
+            ctx.arc(sx+TILE*rx, sy+TILE*ry, 7, 0, Math.PI*2);
+            ctx.fill();
+          });
+          // 中央 小池
+          ctx.fillStyle = TILE_BASE[T.WATER];
+          ctx.beginPath();
+          ctx.ellipse(sx+TILE/2, sy+TILE/2, 12, 8, 0, 0, Math.PI*2);
+          ctx.fill();
+          break;
+        case T.WATER:
+          // 波紋アニメ
+          const ph = now * 0.001 + c * 0.3 + r * 0.7;
+          ctx.globalAlpha = 0.5;
+          ctx.fillRect(sx+8+Math.sin(ph)*4, sy+TILE/2-1, TILE-16, 2);
+          ctx.fillRect(sx+16+Math.sin(ph+1)*4, sy+TILE/2+8, TILE-32, 1);
+          ctx.globalAlpha = 1;
+          break;
+        case T.STONE:
+          // 石畳パターン
+          [[0.2,0.2],[0.6,0.4],[0.3,0.7],[0.7,0.65]].forEach(([rx,ry])=>{
+            ctx.fillRect(sx+TILE*rx, sy+TILE*ry, 16, 10);
+          });
+          break;
+        case T.ROAD:
+          // センターライン（点線）
+          ctx.fillStyle = "rgba(255,255,255,0.04)";
+          ctx.fillRect(sx+TILE/2-1, sy, 2, TILE);
+          ctx.fillRect(sx, sy+TILE/2-1, TILE, 2);
+          break;
+      }
+    }
+  }
+
+  // ── リモートプレイヤー（カリング） ───────────────────────────
+  let visCount = 0;
+  others.forEach(p => {
+    const sx = p.x - camX, sy = p.y - camY;
+    if (sx < -CFG.VP_PAD || sx > vw + CFG.VP_PAD) return;
+    if (sy < -CFG.VP_PAD || sy > vh + CFG.VP_PAD) return;
+    visCount++;
+    const dist  = Math.hypot(p.x - myX, p.y - myY);
+    const alpha = dist < CFG.NICK_FULL  ? 1
+                : dist < CFG.NICK_SHOW  ? 1 - (dist - CFG.NICK_FULL) / (CFG.NICK_SHOW - CFG.NICK_FULL)
+                : 0;
+    drawAvatar(sx, sy, p.avatar, p.nick, alpha, false,
+               { title: p.title || "", hobbies: p.hobbies || [] });
+  });
+  // 自分
+  drawAvatar(myX - camX, myY - camY, myAvatar, myNick, 1, true, myProfile);
+
+  document.getElementById("h-vis").textContent = visCount;
+}
+
+// アバター1体を描画
+// profile: { title, hobbies } — 省略可
+function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
+  const r = CFG.PLAYER_R * (isSelf ? 1.15 : 1);
+
+  // 影光彩
+  ctx.save();
+  ctx.shadowColor = isSelf ? "rgba(232,146,74,0.8)" : "rgba(74,150,230,0.5)";
+  ctx.shadowBlur  = isSelf ? 18 : 10;
+
+  // 円背景
+  ctx.fillStyle = isSelf ? "rgba(232,146,74,0.25)" : "rgba(44,74,124,0.35)";
+  ctx.beginPath();
+  ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 絵文字アバター
+  ctx.font = `${r * 1.5}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(emoji, sx, sy);
+
+  // 自分の枠（提灯オレンジ）
+  if (isSelf) {
+    ctx.strokeStyle = "rgba(232,146,74,0.8)";
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // ── 名札描画（2段：称号＋ニック / 趣味タグ） ──────────────
+  if (nickAlpha > 0.02) {
+    ctx.save();
+    ctx.globalAlpha = nickAlpha;
+    ctx.textAlign   = "center";
+
+    const title   = profile?.title   || "";
+    const hobbies = profile?.hobbies || [];
+    const hasTitle  = title.length > 0;
+    const hasHobby  = hobbies.length > 0;
+
+    // ── 段1：称号（ある場合）+ ニックネーム ─────────────────
+    // 行の高さ設定
+    const LINE_H   = 16;
+    const TAG_H    = 14;
+    const PAD_X    = 8;
+    const PAD_Y    = 5;
+    const GAP      = 3;
+
+    // 称号行
+    let curY = sy - r - 10;
+
+    // 趣味タグ行（最下段）
+    if (hasHobby) {
+      const tagFontSize = 9;
+      ctx.font = `${tagFontSize}px var(--font, sans-serif)`;
+      const tagTexts = hobbies.map(h => `${h}`);
+      const tagWidths = tagTexts.map(t => ctx.measureText(t).width + 10);
+      const totalTagW = tagWidths.reduce((a, b) => a + b, 0) + (tagWidths.length - 1) * 4;
+      const tagY = curY - TAG_H - GAP;
+
+      // 各タグの背景
+      let tx = sx - totalTagW / 2;
+      tagTexts.forEach((t, i) => {
+        const tw = tagWidths[i];
+        ctx.fillStyle = "rgba(26,46,80,0.85)";
+        ctx.beginPath();
+        ctx.roundRect(tx, tagY, tw, TAG_H, 6);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(74,150,230,0.4)";
+        ctx.lineWidth = 0.8;
+        ctx.stroke();
+        ctx.fillStyle = "#7ab0e8";
+        ctx.textBaseline = "middle";
+        ctx.fillText(t, tx + tw / 2, tagY + TAG_H / 2);
+        tx += tw + 4;
+      });
+
+      curY = tagY - GAP;
+    }
+
+    // 称号行（ある場合）
+    if (hasTitle) {
+      const titleFontSize = 10;
+      ctx.font = `bold ${titleFontSize}px var(--font, sans-serif)`;
+      const titleW = ctx.measureText(title).width + PAD_X * 2;
+      const titleY = curY - LINE_H - GAP;
+      ctx.fillStyle = "rgba(60,40,10,0.85)";
+      ctx.beginPath();
+      ctx.roundRect(sx - titleW / 2, titleY, titleW, LINE_H, 5);
+      ctx.fill();
+      ctx.fillStyle = "#f0c84a";
+      ctx.textBaseline = "middle";
+      ctx.fillText(title, sx, titleY + LINE_H / 2);
+      curY = titleY - GAP;
+    }
+
+    // ニックネーム行
+    const nickFontSize = isSelf ? 12 : 11;
+    ctx.font = `${isSelf ? "bold " : ""}${nickFontSize}px var(--font, sans-serif)`;
+    const nickW = ctx.measureText(nick).width + PAD_X * 2;
+    const nickY = curY - LINE_H;
+    ctx.fillStyle = "rgba(14,18,24,0.8)";
+    ctx.beginPath();
+    ctx.roundRect(sx - nickW / 2, nickY, nickW, LINE_H, 5);
+    ctx.fill();
+    ctx.fillStyle = isSelf ? "#f4efe6" : "#ddd8cc";
+    ctx.textBaseline = "middle";
+    ctx.fillText(nick, sx, nickY + LINE_H / 2);
+
+    ctx.restore();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ミニマップ
+// ══════════════════════════════════════════════════════════════════
+function drawMinimap() {
+  const mw = mmCv.width, mh = mmCv.height;
+  const sx_ = mw / worldW, sy_ = mh / worldH;
+  const vw  = canvas.width, vh = canvas.height;
+
+  mmCtx.clearRect(0, 0, mw, mh);
+  mmCtx.fillStyle = "#0e1218";
+  mmCtx.fillRect(0, 0, mw, mh);
+
+  // 川（水色）
+  if (tileMap) {
+    const TILE = CFG.TILE;
+    const { map, cols, rows } = tileMap;
+    // 簡易タイル描画（WATER のみ）
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (map[r][c] === T.WATER) {
+          mmCtx.fillStyle = "rgba(14,36,64,0.9)";
+          mmCtx.fillRect(c*TILE*sx_, r*TILE*sy_, TILE*sx_+1, TILE*sy_+1);
+        }
+        if (map[r][c] === T.PARK) {
+          mmCtx.fillStyle = "rgba(26,46,20,0.7)";
+          mmCtx.fillRect(c*TILE*sx_, r*TILE*sy_, TILE*sx_+1, TILE*sy_+1);
+        }
+      }
+    }
+  }
+
+  // 他プレイヤー
+  others.forEach(p => {
+    mmCtx.fillStyle = "rgba(100,160,255,0.7)";
+    mmCtx.fillRect(p.x*sx_-1, p.y*sy_-1, 2.5, 2.5);
+  });
+
+  // 自分
+  mmCtx.fillStyle = "#f0c84a";
+  mmCtx.beginPath();
+  mmCtx.arc(myX*sx_, myY*sy_, 3, 0, Math.PI*2);
+  mmCtx.fill();
+
+  // ビューポート枠
+  mmCtx.strokeStyle = "rgba(232,146,74,0.6)";
+  mmCtx.lineWidth = 1;
+  mmCtx.strokeRect(camX*sx_, camY*sy_, vw*sx_, vh*sy_);
+
+  // ワープスポットアイコン
+  drawMinimapWarpSpots(sx_, sy_);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  レーダー
+// ══════════════════════════════════════════════════════════════════
+function updateRadar(vw, vh) {
+  const cnt = { N:0, S:0, W:0, E:0 };
+  others.forEach(p => {
+    const sx = p.x - camX, sy = p.y - camY;
+    if (sx >= 0 && sx <= vw && sy >= 0 && sy <= vh) return;
+    const ax = Math.abs(sx - vw/2), ay = Math.abs(sy - vh/2);
+    if (ax > ay) { sx < 0 ? cnt.W++ : cnt.E++; }
+    else         { sy < 0 ? cnt.N++ : cnt.S++; }
+  });
+  const sym = { N:"↑",S:"↓",W:"←",E:"→" };
+  Object.entries(cnt).forEach(([d, n]) => {
+    const el = radarEls[d]; if (!el) return;
+    el.style.opacity = n > 0 ? "1" : "0";
+    if (n > 0) el.textContent = `${sym[d]} ${n}人`;
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  チャット吹き出し更新
+// ══════════════════════════════════════════════════════════════════
+function updateBubbles(vw, vh, now) {
+  for (let i = bubbles.length - 1; i >= 0; i--) {
+    const b = bubbles[i];
+    const age = now - b.born;
+    if (age > CFG.BUBBLE_TTL) {
+      b.el.remove();
+      bubbles.splice(i, 1);
+      continue;
+    }
+    // フェードアウト
+    const fadeStart = CFG.BUBBLE_TTL * 0.7;
+    const alpha = age > fadeStart
+      ? 1 - (age - fadeStart) / (CFG.BUBBLE_TTL - fadeStart)
+      : 1;
+    b.el.style.opacity = alpha.toFixed(2);
+
+    // ワールド座標 → スクリーン座標
+    const sx = b.wx - camX;
+    const sy = b.wy - camY - CFG.PLAYER_R - 54;
+    b.el.style.left = (sx - 100) + "px";
+    b.el.style.top  = sy + "px";
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  HUD
+// ══════════════════════════════════════════════════════════════════
+function updateHUD() {
+  document.getElementById("h-online").textContent = totalOnline;
+  document.getElementById("h-pos").textContent    = `${Math.floor(myX)}, ${Math.floor(myY)}`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  トースト通知
+// ══════════════════════════════════════════════════════════════════
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  名札カスタム
+// ══════════════════════════════════════════════════════════════════
+const TITLES = [
+  { label: "🌸 花見名人",  value: "🌸 花見名人"  },
+  { label: "🍵 お茶好き",  value: "🍵 お茶好き"  },
+  { label: "🎵 音楽好き",  value: "🎵 音楽好き"  },
+  { label: "📚 読書家",    value: "📚 読書家"    },
+  { label: "🌿 園芸家",    value: "🌿 園芸家"    },
+  { label: "🎨 絵かき",    value: "🎨 絵かき"    },
+  { label: "🚶 散歩好き",  value: "🚶 散歩好き"  },
+  { label: "🍳 料理上手",  value: "🍳 料理上手"  },
+  { label: "🐾 動物好き",  value: "🐾 動物好き"  },
+  { label: "✈️ 旅好き",   value: "✈️ 旅好き"   },
+  { label: "♟ 将棋愛好家", value: "♟ 将棋愛好家" },
+  { label: "🎣 釣り人",    value: "🎣 釣り人"    },
+  { label: "🏮 お祭り好き", value: "🏮 お祭り好き" },
+  { label: "🌙 夜型人間",  value: "🌙 夜型人間"  },
+  { label: "☀️ 朝型人間", value: "☀️ 朝型人間" },
+  { label: "（称号なし）",  value: ""            },
+];
+
+const HOBBIES = [
+  "旅行", "料理", "読書", "音楽", "映画", "園芸", "写真",
+  "手芸", "釣り", "将棋", "囲碁", "お茶", "俳句", "書道",
+  "散歩", "ヨガ", "登山", "温泉", "野球", "相撲観戦",
+];
+
+// 名札モーダルの構築
+function buildBadgeModal() {
+  // 称号グリッド
+  const tg = document.getElementById("title-grid");
+  tg.innerHTML = "";
+  TITLES.forEach(t => {
+    const el = document.createElement("div");
+    el.className = "title-opt" + (myProfile.title === t.value ? " selected" : "");
+    el.textContent = t.label;
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".title-opt").forEach(e => e.classList.remove("selected"));
+      el.classList.add("selected");
+      myProfile.title = t.value;
+      updateBadgePreview();
+    });
+    tg.appendChild(el);
+  });
+
+  // 趣味タググリッド
+  const hg = document.getElementById("hobby-grid");
+  hg.innerHTML = "";
+  HOBBIES.forEach(h => {
+    const el = document.createElement("div");
+    el.className = "hobby-opt" + (myProfile.hobbies.includes(h) ? " selected" : "");
+    el.textContent = h;
+    el.addEventListener("click", () => {
+      const idx = myProfile.hobbies.indexOf(h);
+      if (idx !== -1) {
+        myProfile.hobbies.splice(idx, 1);
+        el.classList.remove("selected");
+      } else {
+        if (myProfile.hobbies.length >= 3) {
+          showToast("趣味タグは最大3つまでです");
+          return;
+        }
+        myProfile.hobbies.push(h);
+        el.classList.add("selected");
+      }
+      updateBadgeNote();
+      updateBadgePreview();
+    });
+    hg.appendChild(el);
+  });
+
+  updateBadgePreview();
+  updateBadgeNote();
+}
+
+function updateBadgePreview() {
+  const titleEl = document.getElementById("pv-title");
+  const tagsEl  = document.getElementById("pv-tags");
+  titleEl.textContent = myProfile.title || "（称号なし）";
+  titleEl.style.color = myProfile.title ? "var(--chochin2)" : "var(--text-dim)";
+  tagsEl.innerHTML = myProfile.hobbies.map(h =>
+    `<span class="pv-tag">${h}</span>`
+  ).join("");
+}
+
+function updateBadgeNote() {
+  document.getElementById("hobby-note").textContent =
+    `　${myProfile.hobbies.length} / 3 選択中`;
+}
+
+function openBadgeModal() {
+  buildBadgeModal();
+  document.getElementById("badge-modal").classList.remove("hidden");
+}
+function closeBadgeModal() {
+  document.getElementById("badge-modal").classList.add("hidden");
+}
+
+document.getElementById("btn-badge").addEventListener("click", openBadgeModal);
+document.getElementById("badge-close").addEventListener("click", closeBadgeModal);
+document.getElementById("badge-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("badge-modal")) closeBadgeModal();
+});
+
+document.getElementById("badge-save").addEventListener("click", () => {
+  // WebSocketサーバーに名札情報を送信（リアルタイム反映）
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({
+      type: "profile",
+      nick:    myNick,
+      avatar:  myAvatar,
+      title:   myProfile.title,
+      hobbies: myProfile.hobbies,
+    }));
+  }
+  // GAS：名札をスプレッドシートに永続保存
+  gasPost({
+    action:   "update_badge",
+    user_id:  gasUserId,
+    title:    myProfile.title,
+    hobbies:  myProfile.hobbies,
+  });
+  closeBadgeModal();
+  showToast("🪪 名札を更新しました！");
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  ワープ機能
+// ══════════════════════════════════════════════════════════════════
+// ワープ先定義（ワールド10000×8000に合わせた座標）
+const WARP_SPOTS = [
+  {
+    name:  "大広場",
+    icon:  "🏮",
+    desc:  "街の中心。みんなが集まる賑やかな広場",
+    tag:   "中央エリア",
+    x:     5000, y: 2000,
+    color: "rgba(232,146,74,0.6)",
+  },
+  {
+    name:  "茶室",
+    icon:  "🍵",
+    desc:  "静かな茶室。ゆっくり話せる落ち着いた場所",
+    tag:   "北西エリア",
+    x:     1500, y: 1200,
+    color: "rgba(74,180,100,0.6)",
+  },
+  {
+    name:  "縁側",
+    icon:  "🪑",
+    desc:  "川沿いの縁側。景色を眺めながらのんびり",
+    tag:   "東エリア",
+    x:     8200, y: 3600,
+    color: "rgba(74,150,230,0.6)",
+  },
+  {
+    name:  "川沿いの桜並木",
+    icon:  "🌸",
+    desc:  "大きな川のほとり。春は桜が美しい",
+    tag:   "南エリア",
+    x:     4200, y: 6500,
+    color: "rgba(230,100,180,0.6)",
+  },
+  {
+    name:  "石畳横丁",
+    icon:  "🏯",
+    desc:  "古い石畳が続く横丁。昭和の雰囲気",
+    tag:   "北東エリア",
+    x:     7800, y: 1000,
+    color: "rgba(180,140,80,0.6)",
+  },
+];
+
+// ワープリストのDOM構築
+function buildWarpList() {
+  const list = document.getElementById("warp-list");
+  list.innerHTML = "";
+  WARP_SPOTS.forEach(spot => {
+    const btn = document.createElement("div");
+    btn.className = "warp-btn";
+    btn.innerHTML = `
+      <div class="warp-icon">${spot.icon}</div>
+      <div class="warp-info">
+        <div class="warp-name">${spot.name}</div>
+        <div class="warp-desc">${spot.desc}</div>
+      </div>
+      <div class="warp-tag">${spot.tag}</div>
+    `;
+    btn.addEventListener("click", () => {
+      closeWarpModal();
+      doWarp(spot);
+    });
+    list.appendChild(btn);
+  });
+}
+
+function openWarpModal() {
+  buildWarpList();
+  document.getElementById("warp-modal").classList.remove("hidden");
+}
+function closeWarpModal() {
+  document.getElementById("warp-modal").classList.add("hidden");
+}
+
+document.getElementById("btn-warp").addEventListener("click", openWarpModal);
+document.getElementById("warp-close").addEventListener("click", closeWarpModal);
+document.getElementById("warp-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("warp-modal")) closeWarpModal();
+});
+
+// ワープ実行（演出付き）
+function doWarp(spot) {
+  const veil = document.getElementById("warp-veil");
+  veil.style.background =
+    `radial-gradient(circle, ${spot.color} 0%, rgba(14,18,24,0) 70%)`;
+
+  veil.classList.add("show");
+  setTimeout(() => {
+    myX = spot.x + (Math.random() - 0.5) * 200;
+    myY = spot.y + (Math.random() - 0.5) * 200;
+    myX = Math.max(100, Math.min(worldW - 100, myX));
+    myY = Math.max(100, Math.min(worldH - 100, myY));
+    if (ws && ws.readyState === 1) {
+      ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
+    }
+    // GAS：ワープ統計
+    gasPost({
+      action:    "warp_stats",
+      user_id:   gasUserId,
+      nick:      myNick,
+      spot_name: spot.name,
+      to_x:      Math.floor(myX),
+      to_y:      Math.floor(myY),
+    });
+    setTimeout(() => {
+      veil.classList.remove("show");
+      showToast(`${spot.icon} ${spot.name} に到着しました！`);
+    }, 300);
+  }, 280);
+}
+
+// ══════════════════════════════════════════════════════════════════
+//  ミニマップにワープ場所アイコンを描画（drawMinimap内から呼ぶ）
+// ══════════════════════════════════════════════════════════════════
+function drawMinimapWarpSpots(sx_, sy_) {
+  WARP_SPOTS.forEach(spot => {
+    const mx = spot.x * sx_, my = spot.y * sy_;
+    // 小さい丸
+    mmCtx.fillStyle = spot.color.replace("0.6", "0.8");
+    mmCtx.beginPath();
+    mmCtx.arc(mx, my, 3.5, 0, Math.PI * 2);
+    mmCtx.fill();
+    // アイコン文字
+    mmCtx.font = "8px serif";
+    mmCtx.textAlign = "center";
+    mmCtx.textBaseline = "bottom";
+    mmCtx.fillText(spot.icon, mx, my - 2);
+  });
+}
+</script>
+</body>
+</html>
