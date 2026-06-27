@@ -471,6 +471,132 @@ canvas#world { display: block; }
   padding: 2px 8px; color: #8ab8f0;
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   8桁パスコード表示（入室後モーダル）
+══════════════════════════════════════════════════════════════════ */
+#passcode-modal .modal-card { max-width:340px; text-align:center; gap:18px; }
+.passcode-display {
+  background: rgba(240,200,74,0.1);
+  border: 2px solid var(--chochin2);
+  border-radius: 12px;
+  padding: 18px 10px;
+  letter-spacing: .25em;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--chochin2);
+  font-family: monospace;
+}
+.passcode-note { font-size:.78rem; color:var(--text-dim); line-height:1.7; }
+
+/* ログイン画面のパスコード入力エリア */
+.passcode-section {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.passcode-section .ps-label {
+  font-size: .75rem; color: var(--text-dim); letter-spacing:.06em;
+}
+.passcode-inp-row {
+  display: flex; gap: 8px;
+}
+.passcode-inp-row input {
+  flex: 1;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: monospace;
+  font-size: 1.1rem;
+  letter-spacing: .2em;
+  padding: 10px 14px;
+  outline: none;
+  text-align: center;
+  transition: border-color .2s;
+}
+.passcode-inp-row input:focus { border-color: var(--chochin2); }
+.passcode-inp-row button {
+  background: rgba(240,200,74,0.15);
+  border: 1px solid var(--chochin2);
+  border-radius: var(--radius);
+  color: var(--chochin2);
+  font-family: var(--font);
+  font-size: .85rem; font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s;
+}
+.passcode-inp-row button:hover { background: rgba(240,200,74,0.28); }
+
+/* ══════════════════════════════════════════════════════════════════
+   通話コントロールバー（画面上部中央寄り）
+══════════════════════════════════════════════════════════════════ */
+#call-bar {
+  position: fixed;
+  bottom: 64px; left: 50%; transform: translateX(-50%);
+  display: none;   /* 通話中のみ表示 */
+  gap: 8px;
+  align-items: center;
+  z-index: 300;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+}
+#call-bar.active { display: flex; }
+.call-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s, transform .1s;
+}
+.call-btn:active { transform: scale(.92); }
+.call-btn.on  { background: rgba(74,200,120,0.25); }
+.call-btn.off { background: rgba(220,80,80,0.3); }
+#call-label {
+  font-size: .75rem; color: var(--text-dim); white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   映像ウィンドウ群
+══════════════════════════════════════════════════════════════════ */
+#video-dock {
+  position: fixed;
+  top: 60px; right: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  z-index: 150;
+}
+.video-tile {
+  position: relative;
+  width: 120px; height: 90px;
+  background: #0e1218;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.video-tile video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.video-tile .vtile-nick {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6);
+  font-size: .65rem; color: #fff;
+  padding: 2px 6px;
+  text-align: center;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.video-tile .vtile-muted {
+  position: absolute; top: 4px; right: 4px;
+  font-size: .8rem;
+  opacity: .8;
+}
+
 /* ── 退出ボタン ── */
 #btn-exit {
   background: rgba(180,40,40,0.15);
@@ -602,6 +728,17 @@ canvas#world { display: block; }
     <div class="login-note">
       ↑↓←→ または WASD キーで移動 ／ チャットで話しかけましょう
     </div>
+
+    <!-- パスコード再入室 -->
+    <div class="passcode-section">
+      <div class="ps-label">🔑 以前の入室コードをお持ちの方</div>
+      <div class="passcode-inp-row">
+        <input id="passcode-inp" type="tel" maxlength="8"
+          placeholder="12345678" autocomplete="off">
+        <button id="btn-restore">復元</button>
+      </div>
+      <div id="restore-err" style="font-size:.75rem;color:#f08080;min-height:1em"></div>
+    </div>
   </div>
 </div>
 
@@ -662,7 +799,25 @@ canvas#world { display: block; }
   <div id="hud-btns">
     <button class="hud-btn" id="btn-badge">🪪 名札</button>
     <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
+    <button class="hud-btn" id="btn-show-code">🔑 コード</button>
     <button class="hud-btn" id="btn-exit">🚪 退出</button>
+  </div>
+
+  <!-- 通話コントロールバー -->
+  <div id="call-bar">
+    <button class="call-btn on"  id="btn-mic" title="マイク">🎤</button>
+    <button class="call-btn on"  id="btn-cam" title="カメラ">📷</button>
+    <span id="call-label">通話中 0人</span>
+    <button class="call-btn off" id="btn-hangup" title="全切断">📵</button>
+  </div>
+
+  <!-- 映像ウィンドウ -->
+  <div id="video-dock">
+    <!-- 自分のプレビュー（常時表示） -->
+    <div class="video-tile" id="my-video-tile" style="display:none">
+      <video id="my-video" autoplay muted playsinline></video>
+      <div class="vtile-nick" id="my-video-nick">あなた</div>
+    </div>
   </div>
 
   <!-- ワープ演出ベール -->
@@ -670,6 +825,26 @@ canvas#world { display: block; }
 
   <!-- トースト -->
   <div id="toast"></div>
+
+  <!-- ══ パスコード表示モーダル ══════════════════════════════════ -->
+  <div id="passcode-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>🔑 あなたの入室コード</h2>
+      <div class="passcode-display" id="passcode-disp">--------</div>
+      <div class="passcode-note">
+        このコードをメモしておくと<br>
+        次回ログイン時に名前・アバター・名札が<br>
+        <strong style="color:var(--chochin2)">自動で復元</strong>されます
+      </div>
+      <button class="btn-enter" id="passcode-copy" style="font-size:.9rem;padding:11px">
+        📋 コードをコピーする
+      </button>
+      <button class="modal-close" id="passcode-close"
+        style="font-size:.85rem;color:var(--text-dim);background:none;border:none;cursor:pointer;padding:4px">
+        閉じる
+      </button>
+    </div>
+  </div>
 
   <!-- ══ 退出確認モーダル ════════════════════════════════════════ -->
   <div id="exit-modal" class="modal-overlay hidden">
@@ -761,17 +936,37 @@ let myX    = 0, myY = 0;
 let myNick = "", myAvatar = "👴";
 let worldW = 10000, worldH = 8000;
 let totalOnline = 0;
-let tileMap     = null;   // { map, cols, rows }
+let tileMap     = null;
 
 // 名札カスタム情報
-const myProfile = {
-  title: "",        // 称号（例："🌸 花見名人"）
-  hobbies: [],      // 趣味タグ（最大3個）
-};
+const myProfile = { title: "", hobbies: [] };
 
 // GAS連携
 let gasUserId    = localStorage.getItem("konnitiwa_uid") || "";
-let sessionStart = 0;   // 入室時刻（ms）
+let sessionStart = 0;
+
+// [P] パスコード
+let myPasscode = localStorage.getItem("konnitiwa_code") || "";
+
+// [R] WebRTC
+const peerConns   = new Map();   // peerId → RTCPeerConnection
+const peerStreams  = new Map();   // peerId → MediaStream
+const peerTiles   = new Map();   // peerId → video-tile DOM
+let   localStream = null;        // 自分のカメラ+マイク
+let   micEnabled  = true;
+let   camEnabled  = true;
+const CALL_RANGE  = 500;         // 通話開始距離 px（server.jsと合わせる）
+const TURN_URLS   = [];          // Metered.ca 等のTURNサーバー設定（任意）
+
+// ICE設定（STUNのみで動作、TURNは任意追加）
+const RTC_CONFIG = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    // TURNサーバーを使う場合は下記を追加
+    // { urls:"turn:xxxx.metered.live:80", username:"xxx", credential:"xxx" },
+  ],
+};
 
 // ── GAS HTTP ユーティリティ ─────────────────────────────────────
 // GASはCORSの制限があるため no-cors で fire-and-forget（記録目的）
@@ -836,6 +1031,31 @@ document.getElementById("nick-inp").addEventListener("keydown", e => {
   if (e.key === "Enter") doEnter();
 });
 
+// [P] パスコード復元ボタン
+document.getElementById("btn-restore").addEventListener("click", doRestore);
+document.getElementById("passcode-inp").addEventListener("keydown", e => {
+  if (e.key === "Enter") doRestore();
+  // 数字のみ入力
+  if (!/[\d\b]/.test(e.key) && !e.ctrlKey) e.preventDefault();
+});
+
+function doRestore() {
+  const code = document.getElementById("passcode-inp").value.trim();
+  if (!/^\d{8}$/.test(code)) {
+    document.getElementById("restore-err").textContent = "8桁の数字を入力してください";
+    return;
+  }
+  const nick = clientSanitize(
+    document.getElementById("nick-inp").value.trim() || "ゲスト", 16
+  );
+  myNick   = nick;
+  myAvatar = selectedAvatar;
+  document.getElementById("restore-err").textContent = "";
+  document.getElementById("btn-enter").disabled = true;
+  // 先に接続してからサーバーへ復元要求
+  gasRegisterAndEnter(nick, selectedAvatar, code);
+}
+
 function doEnter() {
   const rawNick = document.getElementById("nick-inp").value.trim();
 
@@ -859,7 +1079,7 @@ function isValidUUID(s) {
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 }
 
-async function gasRegisterAndEnter(nick, avatar) {
+async function gasRegisterAndEnter(nick, avatar, restoreCode) {
   // [F-INPUT] localStorageのuser_idがUUID形式でなければ破棄
   if (gasUserId && !isValidUUID(gasUserId)) {
     gasUserId = "";
@@ -899,13 +1119,13 @@ async function gasRegisterAndEnter(nick, avatar) {
   });
 
   document.getElementById("btn-enter").disabled = false;
-  connect(CFG.WS_URL);
+  connect(CFG.WS_URL, restoreCode);
 }
 
 // ══════════════════════════════════════════════════════════════════
 //  WebSocket
 // ══════════════════════════════════════════════════════════════════
-function connect(url) {
+function connect(url, restoreCode) {
   document.getElementById("login-err").textContent = "接続中…";
   try { ws = new WebSocket(url); }
   catch (e) {
@@ -916,6 +1136,10 @@ function connect(url) {
   ws.onopen = () => {
     setBanner("接続完了 ✓", "ok");
     ws.send(JSON.stringify({ type: "profile", nick: myNick, avatar: myAvatar }));
+    // [P] パスコード復元要求
+    if (restoreCode && /^\d{8}$/.test(restoreCode)) {
+      ws.send(JSON.stringify({ type: "restore_passcode", code: restoreCode }));
+    }
   };
 
   ws.onmessage = ev => {
@@ -933,6 +1157,9 @@ function connect(url) {
       resizeCanvas();
       requestAnimationFrame(loop);
 
+      // [P] 入室コードを発行（または復元）
+      ws.send(JSON.stringify({ type: "issue_passcode" }));
+
       // GAS：入室ログ
       gasPost({
         action: "access_log", user_id: gasUserId,
@@ -941,18 +1168,47 @@ function connect(url) {
       });
     }
 
+    // [P] パスコード発行通知
+    if (m.type === "passcode") {
+      myPasscode = m.code;
+      localStorage.setItem("konnitiwa_code", myPasscode);
+      // 初回のみ自動表示
+      if (!localStorage.getItem("konnitiwa_code_shown")) {
+        localStorage.setItem("konnitiwa_code_shown", "1");
+        openPasscodeModal();
+      }
+    }
+
+    // [P] パスコード復元結果
+    if (m.type === "passcode_result") {
+      if (m.ok) {
+        myNick   = m.nick;
+        myAvatar = m.avatar;
+        myProfile.title   = m.title   || "";
+        myProfile.hobbies = m.hobbies || [];
+        showToast(`🔑 ${myNick} として復元しました！`);
+      } else {
+        showToast(`⚠️ コードが見つかりませんでした: ${m.reason}`);
+      }
+    }
+
     if (m.type === "snapshot") {
       totalOnline = m.total;
+      const prevIds = new Set(others.keys());
       others.clear();
-      m.players.forEach(p => {
-        if (p.id !== myId) others.set(p.id, p);
-        // profile情報も含めて保持（title, hobbies）
-      });
+      m.players.forEach(p => { if (p.id !== myId) others.set(p.id, p); });
+      // [R] 通話範囲チェック
+      checkCallRange(prevIds);
     }
 
     if (m.type === "chat") {
       spawnBubble(m.id, m.nick, m.avatar, m.text, m.x, m.y);
     }
+
+    // [R] WebRTC シグナリング受信
+    if (m.type === "rtc_offer")  handleOffer(m);
+    if (m.type === "rtc_answer") handleAnswer(m);
+    if (m.type === "rtc_ice")    handleIce(m);
   };
 
   ws.onclose = () => {
@@ -1521,6 +1777,243 @@ function updateHUD() {
 }
 
 // ══════════════════════════════════════════════════════════════════
+//  [P] パスコードモーダル
+// ══════════════════════════════════════════════════════════════════
+function openPasscodeModal() {
+  document.getElementById("passcode-disp").textContent =
+    myPasscode || "--------";
+  document.getElementById("passcode-modal").classList.remove("hidden");
+}
+function closePasscodeModal() {
+  document.getElementById("passcode-modal").classList.add("hidden");
+}
+document.getElementById("btn-show-code").addEventListener("click", openPasscodeModal);
+document.getElementById("passcode-close").addEventListener("click", closePasscodeModal);
+document.getElementById("passcode-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("passcode-modal")) closePasscodeModal();
+});
+document.getElementById("passcode-copy").addEventListener("click", () => {
+  if (!myPasscode) return;
+  navigator.clipboard?.writeText(myPasscode).then(() => {
+    showToast("📋 コードをコピーしました！");
+  }).catch(() => {
+    // fallback
+    const inp = document.createElement("input");
+    inp.value = myPasscode;
+    document.body.appendChild(inp);
+    inp.select(); document.execCommand("copy");
+    document.body.removeChild(inp);
+    showToast("📋 コードをコピーしました！");
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════
+//  [R] WebRTC 近接通話
+// ══════════════════════════════════════════════════════════════════
+
+// ── ローカルストリーム取得 ─────────────────────────────────────────
+async function ensureLocalStream() {
+  if (localStream) return localStream;
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({
+      audio: true, video: { width:320, height:240, facingMode:"user" },
+    });
+    // 自分のプレビュー表示
+    const myTile  = document.getElementById("my-video-tile");
+    const myVideo = document.getElementById("my-video");
+    document.getElementById("my-video-nick").textContent = myNick;
+    myVideo.srcObject = localStream;
+    myTile.style.display = "block";
+    // マイク・カメラの初期状態を反映
+    localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+    localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
+  } catch (e) {
+    showToast("⚠️ カメラ/マイクの取得に失敗しました");
+    localStream = null;
+  }
+  return localStream;
+}
+
+// ── 通話範囲チェック（snapshotごとに呼ばれる） ─────────────────────
+function checkCallRange(prevIds) {
+  const inRange = new Set();
+  others.forEach((p, id) => {
+    if (Math.hypot(p.x - myX, p.y - myY) < CALL_RANGE) inRange.add(id);
+  });
+
+  // 範囲内で未接続 → call開始
+  inRange.forEach(id => {
+    if (!peerConns.has(id) && id > myId) callPeer(id);
+  });
+
+  // 範囲外になった → 切断
+  peerConns.forEach((pc, id) => {
+    if (!inRange.has(id)) hangupPeer(id);
+  });
+
+  updateCallBar();
+}
+
+// ── Offerを送る（Callerサイド） ────────────────────────────────────
+async function callPeer(peerId) {
+  const stream = await ensureLocalStream();
+  if (!stream) return;
+
+  const pc = createPC(peerId);
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  wsSend({ type: "rtc_offer", to: peerId, sdp: pc.localDescription });
+}
+
+// ── Offerを受け取る（Calleeサイド） ───────────────────────────────
+async function handleOffer(m) {
+  if (peerConns.has(m.from)) return;
+  const stream = await ensureLocalStream();
+  if (!stream) return;
+
+  const pc = createPC(m.from);
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+  await pc.setRemoteDescription(new RTCSessionDescription(m.sdp));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  wsSend({ type: "rtc_answer", to: m.from, sdp: pc.localDescription });
+}
+
+async function handleAnswer(m) {
+  const pc = peerConns.get(m.from);
+  if (!pc) return;
+  await pc.setRemoteDescription(new RTCSessionDescription(m.sdp));
+}
+
+async function handleIce(m) {
+  const pc = peerConns.get(m.from);
+  if (!pc || !m.candidate) return;
+  try { await pc.addIceCandidate(new RTCIceCandidate(m.candidate)); } catch {}
+}
+
+// ── RTCPeerConnection 作成（共通） ─────────────────────────────────
+function createPC(peerId) {
+  const pc = new RTCPeerConnection(RTC_CONFIG);
+  peerConns.set(peerId, pc);
+
+  // ICE候補をサーバー経由で相手に送る
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate) wsSend({ type: "rtc_ice", to: peerId, candidate });
+  };
+
+  // 相手の映像・音声を受信
+  pc.ontrack = ({ streams }) => {
+    const stream = streams[0];
+    peerStreams.set(peerId, stream);
+    addVideoTile(peerId, stream);
+    updateCallBar();
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (["disconnected","failed","closed"].includes(pc.connectionState)) {
+      hangupPeer(peerId);
+    }
+  };
+
+  return pc;
+}
+
+// ── 映像タイルを追加 ──────────────────────────────────────────────
+function addVideoTile(peerId, stream) {
+  if (peerTiles.has(peerId)) return;
+  const peer = others.get(peerId);
+  const nick = peer ? peer.nick : peerId;
+
+  const tile  = document.createElement("div");
+  tile.className = "video-tile";
+  tile.id = `vtile-${peerId}`;
+
+  const video = document.createElement("video");
+  video.autoplay = true; video.playsInline = true;
+  video.srcObject = stream;
+
+  const label = document.createElement("div");
+  label.className = "vtile-nick";
+  label.textContent = nick;
+
+  tile.appendChild(video);
+  tile.appendChild(label);
+  document.getElementById("video-dock").appendChild(tile);
+  peerTiles.set(peerId, tile);
+}
+
+// ── 1対1切断 ─────────────────────────────────────────────────────
+function hangupPeer(peerId) {
+  const pc = peerConns.get(peerId);
+  if (pc) { try { pc.close(); } catch {} peerConns.delete(peerId); }
+  peerStreams.delete(peerId);
+  const tile = peerTiles.get(peerId);
+  if (tile) { tile.remove(); peerTiles.delete(peerId); }
+  updateCallBar();
+}
+
+// ── 全切断 ────────────────────────────────────────────────────────
+function hangupAll() {
+  [...peerConns.keys()].forEach(hangupPeer);
+  if (localStream) {
+    localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+  }
+  document.getElementById("my-video-tile").style.display = "none";
+  document.getElementById("my-video").srcObject = null;
+  updateCallBar();
+}
+
+// ── 通話バー更新 ──────────────────────────────────────────────────
+function updateCallBar() {
+  const bar   = document.getElementById("call-bar");
+  const count = peerConns.size;
+  if (count > 0 || localStream) {
+    bar.classList.add("active");
+    document.getElementById("call-label").textContent = `通話中 ${count}人`;
+  } else {
+    bar.classList.remove("active");
+  }
+}
+
+// ── マイク ON/OFF ─────────────────────────────────────────────────
+document.getElementById("btn-mic").addEventListener("click", () => {
+  micEnabled = !micEnabled;
+  if (localStream) {
+    localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
+  }
+  const btn = document.getElementById("btn-mic");
+  btn.textContent = micEnabled ? "🎤" : "🔇";
+  btn.className   = `call-btn ${micEnabled ? "on" : "off"}`;
+  showToast(micEnabled ? "🎤 マイク ON" : "🔇 マイク OFF");
+});
+
+// ── カメラ ON/OFF ─────────────────────────────────────────────────
+document.getElementById("btn-cam").addEventListener("click", () => {
+  camEnabled = !camEnabled;
+  if (localStream) {
+    localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
+  }
+  const tile = document.getElementById("my-video-tile");
+  if (tile) tile.style.opacity = camEnabled ? "1" : "0.3";
+  const btn = document.getElementById("btn-cam");
+  btn.textContent = camEnabled ? "📷" : "🚫";
+  btn.className   = `call-btn ${camEnabled ? "on" : "off"}`;
+  showToast(camEnabled ? "📷 カメラ ON" : "🚫 カメラ OFF");
+});
+
+// ── 全切断ボタン ──────────────────────────────────────────────────
+document.getElementById("btn-hangup").addEventListener("click", hangupAll);
+
+// ── WS 送信ユーティリティ ─────────────────────────────────────────
+function wsSend(obj) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+}
+
+// ══════════════════════════════════════════════════════════════════
 //  トースト通知
 // ══════════════════════════════════════════════════════════════════
 let toastTimer = null;
@@ -1545,6 +2038,9 @@ function closeExitModal() {
 
 function doExit() {
   closeExitModal();
+
+  // [R] 通話全切断
+  hangupAll();
 
   // GAS：退室ログ
   const sessionMin = sessionStart
