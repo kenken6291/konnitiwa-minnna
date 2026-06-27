@@ -1283,6 +1283,7 @@ function _doConnect() {
       tileMap = buildMap(worldW, worldH);
       // initRadarは初回のみ
       if (Object.keys(radarEls).length === 0) initRadar();
+      initVpad();
       sessionStart = Date.now();
       document.getElementById("login").style.display = "none";
       document.getElementById("game").style.display  = "block";
@@ -1461,76 +1462,68 @@ function buildMap(wW, wH) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  入力
+//  入力管理（シンプルなフラグ方式）
 // ══════════════════════════════════════════════════════════════════
-// ══════════════════════════════════════════════════════════════════
-//  入力
-// ══════════════════════════════════════════════════════════════════
-// フォーム要素タグ（これにフォーカス中は移動・キー入力を無効化）
-const NO_MOVE_TAGS = new Set(["INPUT","TEXTAREA","BUTTON","SELECT"]);
 
-// 現在押されているキーのセット
-const keys    = new Set();
+// 移動を止める条件：任意のinput/textarea/button等にフォーカス中
+function isMovementBlocked() {
+  const tag = document.activeElement?.tagName;
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "BUTTON" || tag === "SELECT";
+}
+
+// 押下中キーを管理するSet
+const keys     = new Set();
 const vpadKeys = new Set();
 
-// チャット入力中フラグ（より確実に管理）
-let chatActive = false;
-
-const chatInput = document.getElementById("chat-input");
-chatInput.addEventListener("focus", () => { chatActive = true;  keys.clear(); });
-chatInput.addEventListener("blur",  () => { chatActive = false; keys.clear(); });
-
 window.addEventListener("keydown", e => {
-  // フォーム要素フォーカス中・チャット入力中はゲームキーを追加しない
-  if (chatActive || NO_MOVE_TAGS.has(document.activeElement?.tagName)) return;
+  if (isMovementBlocked()) return;           // フォーカス中は無視
   keys.add(e.key);
   if (e.key === "Enter") {
-    chatInput.focus();
+    // Enterでチャット欄にフォーカス（ゲームへのキー追加は上でブロック済み）
+    const ci = document.getElementById("chat-input");
+    if (ci) { e.preventDefault(); ci.focus(); }
     return;
   }
   if (e.key.startsWith("Arrow")) e.preventDefault();
 });
 
-window.addEventListener("keyup", e => keys.delete(e.key));
+window.addEventListener("keyup",   e => keys.delete(e.key));
+window.addEventListener("blur",    ()  => keys.clear());           // ウィンドウ非アクティブ
+window.addEventListener("focus",   ()  => keys.clear());           // 戻った時もクリア
+document.addEventListener("visibilitychange", () => keys.clear()); // タブ切替
 
-// フォーカスが外れた時・ウィンドウがblurした時は全クリア
-window.addEventListener("blur",     () => keys.clear());
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) keys.clear();
-});
-
-// バーチャルパッド
-[
-  ["vp-up","ArrowUp"],["vp-down","ArrowDown"],
-  ["vp-left","ArrowLeft"],["vp-right","ArrowRight"],
-].forEach(([elId, key]) => {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const on  = () => vpadKeys.add(key);
-  const off = () => vpadKeys.delete(key);
-  el.addEventListener("pointerdown", on);
-  el.addEventListener("pointerup",   off);
-  el.addEventListener("pointerleave", off);
-  el.addEventListener("pointercancel", off);
-});
+// バーチャルパッド（ゲーム開始後に初期化するため関数化）
+function initVpad() {
+  [
+    ["vp-up","ArrowUp"],["vp-down","ArrowDown"],
+    ["vp-left","ArrowLeft"],["vp-right","ArrowRight"],
+  ].forEach(([elId, key]) => {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    const on  = () => { if (!isMovementBlocked()) vpadKeys.add(key); };
+    const off = () => vpadKeys.delete(key);
+    el.addEventListener("pointerdown",  on);
+    el.addEventListener("pointerup",    off);
+    el.addEventListener("pointerleave", off);
+    el.addEventListener("pointercancel",off);
+  });
+}
 
 // チャット送信
 document.getElementById("chat-send").addEventListener("click", sendChat);
 document.getElementById("chat-input").addEventListener("keydown", e => {
   if (e.key === "Enter") { e.preventDefault(); sendChat(); }
-  if (e.key === "Escape") document.getElementById("chat-input").blur();
+  if (e.key === "Escape") { e.preventDefault(); document.getElementById("chat-input").blur(); keys.clear(); }
 });
 
 function sendChat() {
   const inp  = document.getElementById("chat-input");
   const text = clientSanitize(inp.value, 60);
-  if (!text || !ws || ws.readyState !== 1) {
-    inp.value = "";
-    chatActive = false;
-    keys.clear();
-    inp.blur();
-    return;
-  }
+  inp.value = "";
+  inp.blur();
+  keys.clear();
+  vpadKeys.clear();
+  if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
   spawnBubble(myId, myNick, myAvatar, text, myX, myY);
   gasPost({
@@ -1540,10 +1533,6 @@ function sendChat() {
     x: Math.floor(myX), y: Math.floor(myY),
     area: getAreaName(myX, myY),
   });
-  inp.value = "";
-  chatActive = false;
-  keys.clear();
-  inp.blur();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1625,20 +1614,21 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (!tileMap) return;
 
-  // ── 移動 ────────────────────────────────────────────────────
-  // チャット入力中・フォーム要素フォーカス中は完全停止
-  const isInputActive = chatActive || NO_MOVE_TAGS.has(document.activeElement?.tagName);
-  if (!isInputActive) {
+  // ── 移動（フォーカス中は完全停止）────────────────────────────
+  if (!isMovementBlocked()) {
     const allKeys = k => keys.has(k) || vpadKeys.has(k);
     const spd = keys.has("Shift") ? CFG.DASH_SPD : CFG.MOVE_SPD;
     let dx = 0, dy = 0;
-    if (allKeys("ArrowUp")   || allKeys("w") || allKeys("W")) dy -= 1;
-    if (allKeys("ArrowDown") || allKeys("s") || allKeys("S")) dy += 1;
-    if (allKeys("ArrowLeft") || allKeys("a") || allKeys("A")) dx -= 1;
-    if (allKeys("ArrowRight")|| allKeys("d") || allKeys("D")) dx += 1;
+    if (allKeys("ArrowUp")    || allKeys("w") || allKeys("W")) dy -= 1;
+    if (allKeys("ArrowDown")  || allKeys("s") || allKeys("S")) dy += 1;
+    if (allKeys("ArrowLeft")  || allKeys("a") || allKeys("A")) dx -= 1;
+    if (allKeys("ArrowRight") || allKeys("d") || allKeys("D")) dx += 1;
     if (dx && dy) { dx *= 0.707; dy *= 0.707; }
     myX = Math.max(0, Math.min(worldW, myX + dx * spd));
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
+  } else {
+    // フォーカス中はキーをクリアし続ける
+    keys.clear();
   }
 
   // ── 送信 ────────────────────────────────────────────────────
