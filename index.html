@@ -195,7 +195,7 @@ canvas#world { display: block; }
 #banner.err  { color: #e86060; border-color: #e86060; }
 #banner.wait { color: var(--text-dim); }
 
-/* ── ミニマップ 右下 ── */
+/* ── ミニマップ 右下（PC）/ 左下（スマホ） ── */
 #mm-wrap {
   position: fixed; bottom: 16px; right: 16px; z-index: 100;
 }
@@ -209,18 +209,68 @@ canvas#world { display: block; }
   text-align: right; margin-top: 3px; letter-spacing: .06em;
 }
 
-/* ── レーダー矢印 ── */
+/* スマホ：ミニマップを左下に移動・縮小 */
+@media (hover: none) and (pointer: coarse) {
+  #mm-wrap {
+    right: auto;
+    left: 16px;
+    bottom: 16px;
+  }
+  #mm-wrap canvas {
+    width: 120px !important;
+    height: 90px  !important;
+  }
+  .mm-label { text-align: left; }
+
+  /* チャット欄：バーチャルパッドと重ならないよう左寄せ＋幅を制限 */
+  #chat-wrap {
+    left: 16px;
+    right: 172px;   /* vpad分（160px + 余白）を確保 */
+    transform: none;
+    width: auto;
+  }
+
+  /* 操作ヒントはスマホ非表示（既存）*/
+}
+
+/* ── レーダー：4方向固定パネル ── */
 .radar {
   position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   background: var(--panel);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 4px 10px 4px 8px;
-  font-size: .7rem; color: var(--chochin2);
-  pointer-events: none; z-index: 200;
-  white-space: nowrap;
-  transition: opacity .3s;
+  padding: 5px 12px;
+  font-size: .75rem;
   font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  transition: background .2s;
+}
+/* 人数ゼロは暗め・ゼロ以上は明るく */
+.radar.zero  { opacity: .45; }
+.radar.some  { opacity: 1; border-color: var(--chochin); }
+.radar .r-arrow { font-size: .9rem; color: var(--chochin2); }
+.radar .r-count { color: var(--chochin2); }
+.radar .r-unit  { color: var(--text-dim); font-size: .68rem; }
+
+/* 上：中央上部 */
+#radar-N { top: 56px; left: 50%; transform: translateX(-50%); }
+/* 下：中央下部（チャット欄の上） */
+#radar-S { bottom: 56px; left: 50%; transform: translateX(-50%); }
+/* 左：左中央 */
+#radar-W { left: 12px; top: 50%; transform: translateY(-50%); }
+/* 右：右中央 */
+#radar-E { right: 12px; top: 50%; transform: translateY(-50%); }
+
+/* スマホ：右レーダーをバーチャルパッドと重ならないよう上にずらす */
+@media (hover: none) and (pointer: coarse) {
+  #radar-E { right: 12px; top: 35%; }
+  #radar-S { bottom: 180px; }
 }
 
 /* ── チャット吹き出し群（Canvas外DOM） ── */
@@ -924,7 +974,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
+  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1376,16 +1426,20 @@ window.addEventListener("resize", resizeCanvas);
 //  レーダー初期化
 // ══════════════════════════════════════════════════════════════════
 function initRadar() {
-  const cfg = {
-    N: "top:60px;left:50%;transform:translateX(-50%)",
-    S: "bottom:60px;left:50%;transform:translateX(-50%)",
-    W: "left:60px;top:50%;transform:translateY(-50%)",
-    E: "right:60px;top:50%;transform:translateY(-50%)",
+  const dirs = {
+    N: { arrow: "↑", label: "北" },
+    S: { arrow: "↓", label: "南" },
+    W: { arrow: "←", label: "西" },
+    E: { arrow: "→", label: "東" },
   };
-  Object.entries(cfg).forEach(([dir, style]) => {
+  Object.entries(dirs).forEach(([dir, cfg]) => {
     const el = document.createElement("div");
-    el.className = "radar";
-    el.style.cssText = style + ";opacity:0";
+    el.className = "radar zero";
+    el.id = `radar-${dir}`;
+    el.innerHTML =
+      `<span class="r-arrow">${cfg.arrow}</span>` +
+      `<span class="r-count" id="rc-${dir}">0</span>` +
+      `<span class="r-unit">人</span>`;
     document.body.appendChild(el);
     radarEls[dir] = el;
   });
@@ -1722,22 +1776,26 @@ function drawMinimap() {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  レーダー
+//  レーダー（四方の人数を常時表示）
 // ══════════════════════════════════════════════════════════════════
 function updateRadar(vw, vh) {
   const cnt = { N:0, S:0, W:0, E:0 };
+
   others.forEach(p => {
-    const sx = p.x - camX, sy = p.y - camY;
-    if (sx >= 0 && sx <= vw && sy >= 0 && sy <= vh) return;
-    const ax = Math.abs(sx - vw/2), ay = Math.abs(sy - vh/2);
-    if (ax > ay) { sx < 0 ? cnt.W++ : cnt.E++; }
-    else         { sy < 0 ? cnt.N++ : cnt.S++; }
+    const dx = p.x - myX;
+    const dy = p.y - myY;
+    // 自分を中心に4分割：|dx| vs |dy| で主方向を決定
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      dx >= 0 ? cnt.E++ : cnt.W++;
+    } else {
+      dy >= 0 ? cnt.S++ : cnt.N++;
+    }
   });
-  const sym = { N:"↑",S:"↓",W:"←",E:"→" };
-  Object.entries(cnt).forEach(([d, n]) => {
-    const el = radarEls[d]; if (!el) return;
-    el.style.opacity = n > 0 ? "1" : "0";
-    if (n > 0) el.textContent = `${sym[d]} ${n}人`;
+
+  Object.entries(cnt).forEach(([dir, n]) => {
+    const el = radarEls[dir]; if (!el) return;
+    document.getElementById(`rc-${dir}`).textContent = n;
+    el.className = `radar ${n > 0 ? "some" : "zero"}`;
   });
 }
 
