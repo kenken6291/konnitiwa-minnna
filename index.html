@@ -989,7 +989,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
+  GAS_URL: "hhttps://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1251,6 +1251,12 @@ function _doConnect() {
         ws.send(JSON.stringify({ type: "ping" }));
       }
     }, 30000);
+
+    // 再接続後：既存の通話を全リセットして近接チェックを再実行
+    if (reconnectCount > 0 || peerConns.size > 0) {
+      hangupAll();
+      setTimeout(() => checkCallRange(new Set()), 1000);
+    }
   };
 
   ws.onmessage = ev => {
@@ -2052,15 +2058,33 @@ function createPC(peerId) {
     if (candidate) wsSend({ type: "rtc_ice", to: peerId, candidate });
   };
 
+  // ICE収集完了ログ
+  pc.onicegatheringstatechange = () => {
+    console.log(`[ICE] gathering: ${pc.iceGatheringState} peer=${peerId}`);
+  };
+
+  // ICE接続状態ログ
+  pc.oniceconnectionstatechange = () => {
+    console.log(`[ICE] connection: ${pc.iceConnectionState} peer=${peerId}`);
+    if (pc.iceConnectionState === "failed") {
+      console.warn("[ICE] failed → restartIce");
+      try { pc.restartIce(); } catch {}
+    }
+  };
+
   // 相手の映像・音声を受信
   pc.ontrack = ({ streams }) => {
     const stream = streams[0];
+    if (!stream) return;
     peerStreams.set(peerId, stream);
     addVideoTile(peerId, stream);
     updateCallBar();
+    const peer = others.get(peerId);
+    showToast(`📹 ${peer ? peer.nick : peerId} さんの映像が届きました`);
   };
 
   pc.onconnectionstatechange = () => {
+    console.log(`[RTC] connection: ${pc.connectionState} peer=${peerId}`);
     if (["disconnected","failed","closed"].includes(pc.connectionState)) {
       hangupPeer(peerId);
     }
