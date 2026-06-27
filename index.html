@@ -1318,7 +1318,11 @@ function _doConnect() {
     }
 
     if (m.type === "chat") {
-      spawnBubble(m.id, m.nick, m.avatar, m.text, m.x, m.y);
+      // サーバーは from: id で送信。othersの最新座標を使う
+      const sender = others.get(m.from);
+      const cx = sender ? sender.x : m.x;
+      const cy = sender ? sender.y : m.y;
+      spawnBubble(m.from, m.nick, m.avatar, m.text, cx, cy);
     }
 
     if (m.type === "rtc_offer")  handleOffer(m);
@@ -1916,9 +1920,19 @@ function updateBubbles(vw, vh, now) {
       : 1;
     b.el.style.opacity = alpha.toFixed(2);
 
+    // 自分の吹き出し → myX/myY で追従
+    // 相手の吹き出し → othersの最新座標で追従（移動しても吹き出しが付いてくる）
+    let wx = b.wx, wy = b.wy;
+    if (b.id === myId) {
+      wx = myX; wy = myY;
+    } else {
+      const peer = others.get(b.id);
+      if (peer) { wx = peer.x; wy = peer.y; }
+    }
+
     // ワールド座標 → スクリーン座標
-    const sx = b.wx - camX;
-    const sy = b.wy - camY - CFG.PLAYER_R - 54;
+    const sx = wx - camX;
+    const sy = wy - camY - CFG.PLAYER_R - 54;
     b.el.style.left = (sx - 100) + "px";
     b.el.style.top  = sy + "px";
   }
