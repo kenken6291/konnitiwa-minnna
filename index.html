@@ -1324,8 +1324,35 @@ function _doConnect() {
     if (m.type === "snapshot") {
       totalOnline = m.total;
       const prevIds = new Set(others.keys());
-      others.clear();
-      m.players.forEach(p => { if (p.id !== myId) others.set(p.id, p); });
+      m.players.forEach(p => {
+        if (p.id === myId) return;
+        const prev = others.get(p.id);
+        if (prev) {
+          // 座標を補間：急激なジャンプを防ぐ（最大200px/tickで追従）
+          const MAX_JUMP = 200;
+          const dx = p.x - prev.x;
+          const dy = p.y - prev.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > MAX_JUMP) {
+            // 大きすぎるジャンプ（ワープ等）はそのまま反映
+            prev.x = p.x; prev.y = p.y;
+          } else {
+            // 通常移動は補間（0.6の割合で追従）
+            prev.x = prev.x + dx * 0.6;
+            prev.y = prev.y + dy * 0.6;
+          }
+          prev.nick   = p.nick;
+          prev.avatar = p.avatar;
+          prev.title  = p.title;
+          prev.hobbies = p.hobbies;
+        } else {
+          others.set(p.id, { ...p });
+        }
+      });
+      // 消えたプレイヤーを削除
+      others.forEach((_, id) => {
+        if (!m.players.find(p => p.id === id)) others.delete(id);
+      });
       checkCallRange(prevIds);
     }
 
