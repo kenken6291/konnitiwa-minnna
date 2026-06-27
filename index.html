@@ -471,6 +471,65 @@ canvas#world { display: block; }
   padding: 2px 8px; color: #8ab8f0;
 }
 
+/* ── 退出ボタン ── */
+#btn-exit {
+  background: rgba(180,40,40,0.15);
+  border-color: rgba(220,80,80,0.4);
+  color: #f08080;
+}
+#btn-exit:hover {
+  background: rgba(220,60,60,0.3);
+  border-color: #e86060;
+  color: #ffaaaa;
+}
+
+/* ── 退出確認モーダル ── */
+#exit-modal .modal-card {
+  max-width: 340px;
+  text-align: center;
+  gap: 16px;
+}
+#exit-modal .exit-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+#exit-modal .exit-msg {
+  font-size: .9rem;
+  color: var(--text);
+  line-height: 1.7;
+}
+#exit-modal .exit-msg span {
+  color: var(--chochin2);
+  font-weight: 700;
+}
+.exit-btns {
+  display: flex;
+  gap: 10px;
+}
+.exit-btns button {
+  flex: 1;
+  padding: 12px;
+  border-radius: var(--radius);
+  font-family: var(--font);
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: opacity .2s, transform .1s;
+}
+.exit-btns button:active { transform: scale(.97); }
+#exit-cancel {
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+}
+#exit-cancel:hover { background: rgba(255,255,255,0.1); }
+#exit-confirm {
+  background: linear-gradient(135deg, #c03030, #e05050);
+  color: #fff;
+  border-color: transparent;
+}
+#exit-confirm:hover { opacity: .85; }
+
 /* ── トースト通知 ── */
 #toast {
   position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
@@ -538,11 +597,6 @@ canvas#world { display: block; }
       <input id="nick-inp" type="text" maxlength="16" placeholder="例）田中さん、花子さん" autocomplete="off">
     </div>
 
-    <div class="field-wrap">
-      <label>サーバー URL</label>
-      <input id="srv-inp" type="text" value="ws://localhost:8080" placeholder="ws://...">
-    </div>
-
     <button class="btn-enter" id="btn-enter">🏮 広場へ入る</button>
     <div id="login-err"></div>
     <div class="login-note">
@@ -608,6 +662,7 @@ canvas#world { display: block; }
   <div id="hud-btns">
     <button class="hud-btn" id="btn-badge">🪪 名札</button>
     <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
+    <button class="hud-btn" id="btn-exit">🚪 退出</button>
   </div>
 
   <!-- ワープ演出ベール -->
@@ -615,6 +670,21 @@ canvas#world { display: block; }
 
   <!-- トースト -->
   <div id="toast"></div>
+
+  <!-- ══ 退出確認モーダル ════════════════════════════════════════ -->
+  <div id="exit-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="exit-icon">🚪</div>
+      <div class="exit-msg">
+        <span id="exit-nick-label"></span> さん、<br>
+        広場を退出しますか？
+      </div>
+      <div class="exit-btns">
+        <button id="exit-cancel">もどる</button>
+        <button id="exit-confirm">退出する</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ══ 名札モーダル ══════════════════════════════════════════ -->
   <div id="badge-modal" class="modal-overlay hidden">
@@ -667,16 +737,18 @@ canvas#world { display: block; }
 //  設定定数
 // ══════════════════════════════════════════════════════════════════
 const CFG = {
-  MOVE_SPD:      4,       // 通常移動速度 px/frame
-  DASH_SPD:      9,       // ダッシュ速度
-  PLAYER_R:      20,      // アバター半径
-  NICK_SHOW:     260,     // ニック表示距離 px
-  NICK_FULL:     160,     // ニック不透明距離 px
-  VP_PAD:        200,     // カリング余白 px
-  SEND_INTERVAL: 50,      // ms（位置送信間隔）
-  BUBBLE_TTL:    5000,    // チャット吹き出し寿命 ms
-  TILE:          100,     // タイルサイズ px
-  // ▼ GAS デプロイURL（デプロイ後に書き換える）
+  MOVE_SPD:      4,
+  DASH_SPD:      9,
+  PLAYER_R:      20,
+  NICK_SHOW:     260,
+  NICK_FULL:     160,
+  VP_PAD:        200,
+  SEND_INTERVAL: 50,
+  BUBBLE_TTL:    5000,
+  TILE:          100,
+  // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
+  WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
+  // ▼ GAS デプロイURL
   GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
 
@@ -766,7 +838,6 @@ document.getElementById("nick-inp").addEventListener("keydown", e => {
 
 function doEnter() {
   const rawNick = document.getElementById("nick-inp").value.trim();
-  const srv     = document.getElementById("srv-inp").value.trim();
 
   // [F-INPUT] ニックネームのサニタイズ
   const nick = clientSanitize(rawNick, 16);
@@ -775,17 +846,11 @@ function doEnter() {
     return;
   }
 
-  // [F-INPUT] サーバーURLの簡易検証（ws:// または wss:// のみ）
-  if (!/^wss?:\/\/.+/.test(srv)) {
-    document.getElementById("login-err").textContent = "サーバーURLは ws:// または wss:// で始まる必要があります";
-    return;
-  }
-
   myNick   = nick;
   myAvatar = selectedAvatar;
   document.getElementById("login-err").textContent = "データを確認中…";
   document.getElementById("btn-enter").disabled = true;
-  gasRegisterAndEnter(nick, selectedAvatar, srv);
+  gasRegisterAndEnter(nick, selectedAvatar);
 }
 
 // [F-INPUT] UUID v4 形式の検証（localStorageの値が改ざんされていた場合に備える）
@@ -794,7 +859,7 @@ function isValidUUID(s) {
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s);
 }
 
-async function gasRegisterAndEnter(nick, avatar, srv) {
+async function gasRegisterAndEnter(nick, avatar) {
   // [F-INPUT] localStorageのuser_idがUUID形式でなければ破棄
   if (gasUserId && !isValidUUID(gasUserId)) {
     gasUserId = "";
@@ -834,7 +899,7 @@ async function gasRegisterAndEnter(nick, avatar, srv) {
   });
 
   document.getElementById("btn-enter").disabled = false;
-  connect(srv);
+  connect(CFG.WS_URL);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1468,8 +1533,57 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  名札カスタム
+//  退出機能
 // ══════════════════════════════════════════════════════════════════
+function openExitModal() {
+  document.getElementById("exit-nick-label").textContent = myNick || "あなた";
+  document.getElementById("exit-modal").classList.remove("hidden");
+}
+function closeExitModal() {
+  document.getElementById("exit-modal").classList.add("hidden");
+}
+
+function doExit() {
+  closeExitModal();
+
+  // GAS：退室ログ
+  const sessionMin = sessionStart
+    ? Math.floor((Date.now() - sessionStart) / 60000) : 0;
+  gasPost({
+    action: "access_log", user_id: gasUserId,
+    nick: myNick, event: "leave",
+    session_min: sessionMin,
+    spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+  });
+
+  // WebSocket を正常切断
+  if (ws && ws.readyState === 1) {
+    ws.close(1000, "ユーザーが退出");
+  }
+
+  // 状態をリセット
+  sessionStart = 0;
+  myId = null;
+  others.clear();
+  bubbles.forEach(b => b.el.remove());
+  bubbles.length = 0;
+
+  // ゲーム画面を非表示→ログイン画面へ戻る
+  document.getElementById("game").style.display  = "none";
+  document.getElementById("login").style.display = "flex";
+
+  // ニックネーム欄を引き継ぐ（再入室しやすくする）
+  document.getElementById("nick-inp").value = myNick;
+  setBanner("接続中…", "wait");
+  document.getElementById("login-err").textContent = "";
+}
+
+document.getElementById("btn-exit").addEventListener("click", openExitModal);
+document.getElementById("exit-cancel").addEventListener("click", closeExitModal);
+document.getElementById("exit-confirm").addEventListener("click", doExit);
+document.getElementById("exit-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("exit-modal")) closeExitModal();
+});
 const TITLES = [
   { label: "🌸 花見名人",  value: "🌸 花見名人"  },
   { label: "🍵 お茶好き",  value: "🍵 お茶好き"  },
