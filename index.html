@@ -974,7 +974,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1062,6 +1062,9 @@ const vpadKeys = new Set();  // バーチャルパッド
 
 // レーダーDOM
 const radarEls = {};
+
+// ゲームループ二重起動防止フラグ
+let loopRunning = false;
 
 // ══════════════════════════════════════════════════════════════════
 //  ログイン UI
@@ -1173,44 +1176,79 @@ async function gasRegisterAndEnter(nick, avatar, restoreCode) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  WebSocket
+//  WebSocket（自動再接続・keepalive付き）
 // ══════════════════════════════════════════════════════════════════
+let reconnectCount  = 0;
+const MAX_RECONNECT = 10;          // 最大再接続回数
+const RECONNECT_DELAY = [
+  3000, 5000, 8000, 10000, 15000,  // 回数ごとの待機ms
+];
+let reconnectTimer  = null;
+let keepaliveTimer  = null;
+let wsUrl           = "";
+let wsRestoreCode   = "";
+
 function connect(url, restoreCode) {
-  document.getElementById("login-err").textContent = "接続中…";
-  try { ws = new WebSocket(url); }
+  wsUrl         = url;
+  wsRestoreCode = restoreCode || "";
+  _doConnect();
+}
+
+function _doConnect() {
+  clearTimeout(reconnectTimer);
+
+  // 接続中バナー
+  if (reconnectCount === 0) {
+    setBanner("接続中…", "wait");
+  } else {
+    setBanner(`再接続中… (${reconnectCount}/${MAX_RECONNECT})`, "wait");
+  }
+
+  try { ws = new WebSocket(wsUrl); }
   catch (e) {
-    document.getElementById("login-err").textContent = "URL エラー: " + e.message;
+    setBanner("URL エラー: " + e.message, "err");
     return;
   }
 
   ws.onopen = () => {
+    reconnectCount = 0;
     setBanner("接続完了 ✓", "ok");
     ws.send(JSON.stringify({ type: "profile", nick: myNick, avatar: myAvatar }));
-    // [P] パスコード復元要求
-    if (restoreCode && /^\d{8}$/.test(restoreCode)) {
-      ws.send(JSON.stringify({ type: "restore_passcode", code: restoreCode }));
+    if (wsRestoreCode && /^\d{8}$/.test(wsRestoreCode)) {
+      ws.send(JSON.stringify({ type: "restore_passcode", code: wsRestoreCode }));
     }
+
+    // keepalive ping（30秒ごと）
+    clearInterval(keepaliveTimer);
+    keepaliveTimer = setInterval(() => {
+      if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({ type: "ping" }));
+      }
+    }, 30000);
   };
 
   ws.onmessage = ev => {
     let m; try { m = JSON.parse(ev.data); } catch { return; }
+
+    // サーバーからのpong（無視してOK）
+    if (m.type === "pong") return;
 
     if (m.type === "init") {
       myId   = m.id;
       myX    = m.x; myY = m.y;
       worldW = m.worldW; worldH = m.worldH;
       tileMap = buildMap(worldW, worldH);
-      initRadar();
+      // initRadarは初回のみ
+      if (Object.keys(radarEls).length === 0) initRadar();
       sessionStart = Date.now();
       document.getElementById("login").style.display = "none";
       document.getElementById("game").style.display  = "block";
       resizeCanvas();
-      requestAnimationFrame(loop);
+      // ループが止まっていたら再開
+      if (!loopRunning) { loopRunning = true; requestAnimationFrame(loop); }
 
-      // [P] 入室コードを発行（または復元）
       ws.send(JSON.stringify({ type: "issue_passcode" }));
 
-      // GAS：入室ログ
       gasPost({
         action: "access_log", user_id: gasUserId,
         nick: myNick, event: "join",
@@ -1218,18 +1256,15 @@ function connect(url, restoreCode) {
       });
     }
 
-    // [P] パスコード発行通知
     if (m.type === "passcode") {
       myPasscode = m.code;
       localStorage.setItem("konnitiwa_code", myPasscode);
-      // 初回のみ自動表示
       if (!localStorage.getItem("konnitiwa_code_shown")) {
         localStorage.setItem("konnitiwa_code_shown", "1");
         openPasscodeModal();
       }
     }
 
-    // [P] パスコード復元結果
     if (m.type === "passcode_result") {
       if (m.ok) {
         myNick   = m.nick;
@@ -1247,7 +1282,6 @@ function connect(url, restoreCode) {
       const prevIds = new Set(others.keys());
       others.clear();
       m.players.forEach(p => { if (p.id !== myId) others.set(p.id, p); });
-      // [R] 通話範囲チェック
       checkCallRange(prevIds);
     }
 
@@ -1255,24 +1289,46 @@ function connect(url, restoreCode) {
       spawnBubble(m.id, m.nick, m.avatar, m.text, m.x, m.y);
     }
 
-    // [R] WebRTC シグナリング受信
     if (m.type === "rtc_offer")  handleOffer(m);
     if (m.type === "rtc_answer") handleAnswer(m);
     if (m.type === "rtc_ice")    handleIce(m);
   };
 
-  ws.onclose = () => {
-    setBanner("切断されました。再読み込みしてください", "err");
-    // GAS：退室ログ
-    const sessionMin = sessionStart
-      ? Math.floor((Date.now() - sessionStart) / 60000) : 0;
-    gasPost({
-      action: "access_log", user_id: gasUserId,
-      nick: myNick, event: "leave",
-      session_min: sessionMin, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
-    });
+  ws.onclose = (ev) => {
+    clearInterval(keepaliveTimer);
+
+    // 意図的な切断（退出ボタン等）はコード1000で来るので再接続しない
+    if (ev.code === 1000) {
+      setBanner("退出しました", "wait");
+      return;
+    }
+
+    // GAS退室ログ
+    if (sessionStart) {
+      const sessionMin = Math.floor((Date.now() - sessionStart) / 60000);
+      gasPost({
+        action: "access_log", user_id: gasUserId,
+        nick: myNick, event: "leave",
+        session_min: sessionMin,
+        spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+      });
+    }
+
+    // ゲーム画面が表示中なら自動再接続
+    if (document.getElementById("game").style.display !== "none"
+        && reconnectCount < MAX_RECONNECT) {
+      const delay = RECONNECT_DELAY[Math.min(reconnectCount, RECONNECT_DELAY.length - 1)];
+      reconnectCount++;
+      setBanner(`接続が切れました。${delay/1000}秒後に再接続…`, "err");
+      reconnectTimer = setTimeout(_doConnect, delay);
+    } else if (reconnectCount >= MAX_RECONNECT) {
+      setBanner("再接続に失敗しました。ページを再読み込みしてください", "err");
+    }
   };
-  ws.onerror = () => setBanner("接続エラー", "err");
+
+  ws.onerror = () => {
+    // onerrorの後にoncloseが来るので処理はoncloseに任せる
+  };
 }
 
 function setBanner(txt, cls) {
@@ -1280,8 +1336,10 @@ function setBanner(txt, cls) {
   b.textContent = txt; b.className = cls;
 }
 
-// タブ/ブラウザ閉じ時の退室ログ（sendBeacon使用）
+// タブ/ブラウザ閉じ時の退室ログ
 window.addEventListener("beforeunload", () => {
+  clearTimeout(reconnectTimer);
+  clearInterval(keepaliveTimer);
   if (!sessionStart || !CFG.GAS_URL.includes("script.google.com")) return;
   const sessionMin = Math.floor((Date.now() - sessionStart) / 60000);
   const body = JSON.stringify({
