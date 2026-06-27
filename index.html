@@ -1534,10 +1534,12 @@ function isMovementBlocked() {
       || tag === "BUTTON" || tag === "SELECT";
 }
 
-// 全移動をリセット
+// モーダルが開いているかフラグ（この間はresetMoveを呼ばない）
+let modalOpen = false;
+
+// 全移動をリセット（vpadKeysは触らない）
 function resetMove() {
   pressedKeys.clear();
-  vpadKeys.clear();
   dashOn = false;
 }
 
@@ -1573,10 +1575,12 @@ window.addEventListener("keyup", e => {
 });
 
 // ── フォーカス離脱・タブ切替で全クリア ──────────────────────────
-window.addEventListener("blur",   resetMove);
+window.addEventListener("blur", () => {
+  if (!modalOpen) resetMove();
+});
 document.addEventListener("visibilitychange", resetMove);
 document.addEventListener("focusin", () => {
-  if (isMovementBlocked()) resetMove();
+  if (!modalOpen && isMovementBlocked()) resetMove();
 });
 
 // ── バーチャルパッド ─────────────────────────────────────────────
@@ -2073,12 +2077,16 @@ function updateHUD() {
 //  [P] パスコードモーダル
 // ══════════════════════════════════════════════════════════════════
 function openPasscodeModal() {
+  modalOpen = true;
+  resetMove();
   document.getElementById("passcode-disp").textContent =
     myPasscode || "--------";
   document.getElementById("passcode-modal").classList.remove("hidden");
 }
 function closePasscodeModal() {
   document.getElementById("passcode-modal").classList.add("hidden");
+  modalOpen = false;
+  resetMove();
 }
 document.getElementById("btn-show-code").addEventListener("click", openPasscodeModal);
 document.getElementById("passcode-close").addEventListener("click", closePasscodeModal);
@@ -2153,11 +2161,15 @@ function checkCallRange(prevIds) {
 
 // ── 通話モーダル ─────────────────────────────────────────────────
 function openCallModal() {
+  modalOpen = true;
+  resetMove();   // 開く前にキーをクリア
   buildNearbyList();
   document.getElementById("call-modal").classList.remove("hidden");
 }
 function closeCallModal() {
   document.getElementById("call-modal").classList.add("hidden");
+  modalOpen = false;
+  resetMove();   // 閉じた後もクリア
 }
 
 function buildNearbyList() {
@@ -2474,11 +2486,15 @@ function showToast(msg) {
 //  退出機能
 // ══════════════════════════════════════════════════════════════════
 function openExitModal() {
+  modalOpen = true;
+  resetMove();
   document.getElementById("exit-nick-label").textContent = myNick || "あなた";
   document.getElementById("exit-modal").classList.remove("hidden");
 }
 function closeExitModal() {
   document.getElementById("exit-modal").classList.add("hidden");
+  modalOpen = false;
+  resetMove();
 }
 
 function doExit() {
@@ -2614,11 +2630,15 @@ function updateBadgeNote() {
 }
 
 function openBadgeModal() {
+  modalOpen = true;
+  resetMove();
   buildBadgeModal();
   document.getElementById("badge-modal").classList.remove("hidden");
 }
 function closeBadgeModal() {
   document.getElementById("badge-modal").classList.add("hidden");
+  modalOpen = false;
+  resetMove();
 }
 
 document.getElementById("btn-badge").addEventListener("click", openBadgeModal);
@@ -2720,11 +2740,15 @@ function buildWarpList() {
 }
 
 function openWarpModal() {
+  modalOpen = true;
+  resetMove();
   buildWarpList();
   document.getElementById("warp-modal").classList.remove("hidden");
 }
 function closeWarpModal() {
   document.getElementById("warp-modal").classList.add("hidden");
+  modalOpen = false;
+  resetMove();
 }
 
 document.getElementById("btn-warp").addEventListener("click", openWarpModal);
