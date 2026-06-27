@@ -1082,10 +1082,6 @@ const bubbles = [];       // {el, x, y, born, id}
 // カメラ（左上ワールド座標）
 let camX = 0, camY = 0;
 
-// 入力
-const keys = new Set();
-const vpadKeys = new Set();  // バーチャルパッド
-
 // レーダーDOM
 const radarEls = {};
 
@@ -1452,35 +1448,55 @@ function buildMap(wW, wH) {
 // ══════════════════════════════════════════════════════════════════
 //  入力
 // ══════════════════════════════════════════════════════════════════
-// ── モーダル系のフォーカス対象要素（これにフォーカス中は移動しない）
+// ══════════════════════════════════════════════════════════════════
+//  入力
+// ══════════════════════════════════════════════════════════════════
+// フォーム要素タグ（これにフォーカス中は移動・キー入力を無効化）
 const NO_MOVE_TAGS = new Set(["INPUT","TEXTAREA","BUTTON","SELECT"]);
 
+// 現在押されているキーのセット
+const keys    = new Set();
+const vpadKeys = new Set();
+
+// チャット入力中フラグ（より確実に管理）
+let chatActive = false;
+
+const chatInput = document.getElementById("chat-input");
+chatInput.addEventListener("focus", () => { chatActive = true;  keys.clear(); });
+chatInput.addEventListener("blur",  () => { chatActive = false; keys.clear(); });
+
 window.addEventListener("keydown", e => {
-  // フォーム要素にフォーカス中はゲーム入力を無視
-  if (NO_MOVE_TAGS.has(document.activeElement?.tagName)) return;
+  // フォーム要素フォーカス中・チャット入力中はゲームキーを追加しない
+  if (chatActive || NO_MOVE_TAGS.has(document.activeElement?.tagName)) return;
   keys.add(e.key);
   if (e.key === "Enter") {
-    document.getElementById("chat-input").focus();
+    chatInput.focus();
+    return;
   }
   if (e.key.startsWith("Arrow")) e.preventDefault();
 });
+
 window.addEventListener("keyup", e => keys.delete(e.key));
 
-// チャット送信後・blur時にkeysを全クリア（移動キー残留防止）
-window.addEventListener("blur", () => keys.clear(), true);
+// フォーカスが外れた時・ウィンドウがblurした時は全クリア
+window.addEventListener("blur",     () => keys.clear());
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) keys.clear();
+});
 
 // バーチャルパッド
 [
   ["vp-up","ArrowUp"],["vp-down","ArrowDown"],
   ["vp-left","ArrowLeft"],["vp-right","ArrowRight"],
-].forEach(([id, key]) => {
-  const el = document.getElementById(id);
+].forEach(([elId, key]) => {
+  const el = document.getElementById(elId);
   if (!el) return;
   const on  = () => vpadKeys.add(key);
   const off = () => vpadKeys.delete(key);
   el.addEventListener("pointerdown", on);
   el.addEventListener("pointerup",   off);
-  el.addEventListener("pointerleave",off);
+  el.addEventListener("pointerleave", off);
+  el.addEventListener("pointercancel", off);
 });
 
 // チャット送信
@@ -1493,7 +1509,13 @@ document.getElementById("chat-input").addEventListener("keydown", e => {
 function sendChat() {
   const inp  = document.getElementById("chat-input");
   const text = clientSanitize(inp.value, 60);
-  if (!text || !ws || ws.readyState !== 1) { inp.value = ""; return; }
+  if (!text || !ws || ws.readyState !== 1) {
+    inp.value = "";
+    chatActive = false;
+    keys.clear();
+    inp.blur();
+    return;
+  }
   ws.send(JSON.stringify({ type: "chat", text }));
   spawnBubble(myId, myNick, myAvatar, text, myX, myY);
   gasPost({
@@ -1504,9 +1526,9 @@ function sendChat() {
     area: getAreaName(myX, myY),
   });
   inp.value = "";
-  inp.blur();
-  // blur後の移動キー残留をクリア
+  chatActive = false;
   keys.clear();
+  inp.blur();
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1589,9 +1611,9 @@ function loop(now) {
   if (!tileMap) return;
 
   // ── 移動 ────────────────────────────────────────────────────
-  // フォーム要素（チャット欄・ボタン等）にフォーカス中は移動しない
-  const activeFocused = NO_MOVE_TAGS.has(document.activeElement?.tagName);
-  if (!activeFocused) {
+  // チャット入力中・フォーム要素フォーカス中は完全停止
+  const isInputActive = chatActive || NO_MOVE_TAGS.has(document.activeElement?.tagName);
+  if (!isInputActive) {
     const allKeys = k => keys.has(k) || vpadKeys.has(k);
     const spd = keys.has("Shift") ? CFG.DASH_SPD : CFG.MOVE_SPD;
     let dx = 0, dy = 0;
