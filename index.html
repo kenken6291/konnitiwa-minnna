@@ -1489,30 +1489,29 @@ function buildMap(wW, wH) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  入力管理（数値フラグ方式 ― Setを使わない）
+//  入力管理（押している間だけ動く・完全版）
 // ══════════════════════════════════════════════════════════════════
 
-// 移動方向フラグ（各方向につき +1 で押下、-1 でリセット。0=停止）
-const moveDir = { up: 0, down: 0, left: 0, right: 0 };
-const vpadKeys = new Set();  // バーチャルパッド用（別管理）
-let   dashOn   = false;
+// 現在押されているキーの集合
+const pressedKeys = new Set();
+const vpadKeys    = new Set();
+let   dashOn      = false;
 
-// フォーカス確認：input/textarea等にいるか
+// フォーム要素フォーカス中は移動しない
 function isMovementBlocked() {
-  const el = document.activeElement;
-  if (!el || el === document.body) return false;
-  const tag = el.tagName;
+  const tag = document.activeElement?.tagName;
   return tag === "INPUT" || tag === "TEXTAREA"
       || tag === "BUTTON" || tag === "SELECT";
 }
 
-// 全移動フラグをリセット
+// 全移動をリセット
 function resetMove() {
-  moveDir.up = moveDir.down = moveDir.left = moveDir.right = 0;
+  pressedKeys.clear();
+  vpadKeys.clear();
   dashOn = false;
 }
 
-// キーと方向のマッピング
+// キー → 方向変換
 function keyToDir(key) {
   if (key === "ArrowUp"    || key === "w" || key === "W") return "up";
   if (key === "ArrowDown"  || key === "s" || key === "S") return "down";
@@ -1521,41 +1520,36 @@ function keyToDir(key) {
   return null;
 }
 
+// ── keydown：移動キーを登録 ──────────────────────────────────────
 window.addEventListener("keydown", e => {
-  // フォーカス中は全リセット
-  if (isMovementBlocked()) { resetMove(); return; }
+  // フォーム要素フォーカス中は無視
+  if (isMovementBlocked()) { pressedKeys.clear(); return; }
 
-  // Enterでチャット欄にフォーカス
-  if (e.key === "Enter") {
+  if (e.key === "Shift")  { dashOn = true; return; }
+  if (e.key === "Enter")  {
     e.preventDefault();
     resetMove();
     document.getElementById("chat-input")?.focus();
     return;
   }
-
-  if (e.key === "Shift") { dashOn = true; return; }
   if (e.key.startsWith("Arrow")) e.preventDefault();
-
-  const dir = keyToDir(e.key);
-  if (dir) moveDir[dir] = 1;
+  if (keyToDir(e.key)) pressedKeys.add(e.key);
 });
 
+// ── keyup：移動キーを解除 ────────────────────────────────────────
 window.addEventListener("keyup", e => {
   if (e.key === "Shift") { dashOn = false; return; }
-  const dir = keyToDir(e.key);
-  if (dir) moveDir[dir] = 0;
+  pressedKeys.delete(e.key);
 });
 
-// ウィンドウ・タブ切替でリセット
-// ※ window.focus は削除（getUserMedia許可ダイアログ閉じ時に誤動作するため）
-window.addEventListener("blur",    resetMove);
+// ── フォーカス離脱・タブ切替で全クリア ──────────────────────────
+window.addEventListener("blur",   resetMove);
 document.addEventListener("visibilitychange", resetMove);
-// INPUTにフォーカスが入った時だけリセット
 document.addEventListener("focusin", () => {
   if (isMovementBlocked()) resetMove();
 });
 
-// ── バーチャルパッド（ゲーム開始後に初期化） ─────────────────────
+// ── バーチャルパッド ─────────────────────────────────────────────
 function initVpad() {
   const map = {
     "vp-up":    "up",
@@ -1566,7 +1560,7 @@ function initVpad() {
   Object.entries(map).forEach(([elId, dir]) => {
     const el = document.getElementById(elId);
     if (!el) return;
-    el.addEventListener("pointerdown",   () => { if (!isMovementBlocked()) vpadKeys.add(dir); });
+    el.addEventListener("pointerdown",   () => vpadKeys.add(dir));
     el.addEventListener("pointerup",     () => vpadKeys.delete(dir));
     el.addEventListener("pointerleave",  () => vpadKeys.delete(dir));
     el.addEventListener("pointercancel", () => vpadKeys.delete(dir));
@@ -1586,7 +1580,6 @@ function sendChat() {
   const text = clientSanitize(inp.value, 60);
   inp.value = "";
   resetMove();
-  vpadKeys.clear();
   inp.blur();
   if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
@@ -1598,6 +1591,24 @@ function sendChat() {
     x: Math.floor(myX), y: Math.floor(myY),
     area: getAreaName(myX, myY),
   });
+}
+
+// ── 移動量計算（ゲームループから呼ぶ） ──────────────────────────
+function calcMoveDelta() {
+  if (isMovementBlocked()) return { dx: 0, dy: 0 };
+  let dx = 0, dy = 0;
+  // キーボード
+  if (pressedKeys.has("ArrowUp")    || pressedKeys.has("w") || pressedKeys.has("W")) dy -= 1;
+  if (pressedKeys.has("ArrowDown")  || pressedKeys.has("s") || pressedKeys.has("S")) dy += 1;
+  if (pressedKeys.has("ArrowLeft")  || pressedKeys.has("a") || pressedKeys.has("A")) dx -= 1;
+  if (pressedKeys.has("ArrowRight") || pressedKeys.has("d") || pressedKeys.has("D")) dx += 1;
+  // バーチャルパッド
+  if (vpadKeys.has("up"))    dy -= 1;
+  if (vpadKeys.has("down"))  dy += 1;
+  if (vpadKeys.has("left"))  dx -= 1;
+  if (vpadKeys.has("right")) dx += 1;
+  if (dx && dy) { dx *= 0.707; dy *= 0.707; }
+  return { dx, dy };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1679,23 +1690,16 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (!tileMap) return;
 
-  // ── 移動（フォーカス中・getUserMedia中は完全停止）──────────────
-  if (!isMovementBlocked() && !gumPending) {
+  // ── 移動 ────────────────────────────────────────────────────
+  const { dx, dy } = calcMoveDelta();
+  if (dx !== 0 || dy !== 0) {
     const spd = dashOn ? CFG.DASH_SPD : CFG.MOVE_SPD;
-    let dx = 0, dy = 0;
-    if (moveDir.up    || vpadKeys.has("up"))    dy -= 1;
-    if (moveDir.down  || vpadKeys.has("down"))  dy += 1;
-    if (moveDir.left  || vpadKeys.has("left"))  dx -= 1;
-    if (moveDir.right || vpadKeys.has("right")) dx += 1;
-    if (dx && dy) { dx *= 0.707; dy *= 0.707; }
     myX = Math.max(0, Math.min(worldW, myX + dx * spd));
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
-  } else {
-    resetMove();
   }
 
-  // ── 送信（gumPending中は送信しない）────────────────────────────
-  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL && !gumPending) {
+  // ── 送信 ────────────────────────────────────────────────────
+  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL) {
     ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
     lastSend = now;
   }
@@ -2070,15 +2074,12 @@ document.getElementById("passcode-copy").addEventListener("click", () => {
 //  [R] WebRTC 近接通話
 // ══════════════════════════════════════════════════════════════════
 
-// getUserMedia取得中フラグ（この間は移動・キー入力を止める）
 let gumPending = false;
 
-// ── ローカルストリーム取得 ─────────────────────────────────────────
 async function ensureLocalStream() {
-  if (localStream) return localStream;
-  if (gumPending)  return null;  // 重複取得防止
+  if (localStream)  return localStream;
+  if (gumPending)   return null;
   gumPending = true;
-  resetMove();   // 取得開始時に移動停止
   try {
     showToast("📷 カメラ・マイクの許可をお願いします…");
     localStream = await navigator.mediaDevices.getUserMedia({
@@ -2099,21 +2100,27 @@ async function ensureLocalStream() {
     localStream = null;
   } finally {
     gumPending = false;
-    resetMove();  // 取得完了後も移動停止（許可ダイアログ中の入力を捨てる）
+    // ※ resetMove() をここで呼ぶのをやめる（移動を強制停止していた原因）
   }
   return localStream;
 }
 
-// ── 通話範囲チェック（snapshotごとに呼ばれる） ─────────────────────
+// ── 通話範囲チェック ────────────────────────────────────────────
+// calling中のpeerIdセット（重複callPeer防止）
+const callingPeers = new Set();
+
 function checkCallRange(prevIds) {
   const inRange = new Set();
   others.forEach((p, id) => {
     if (Math.hypot(p.x - myX, p.y - myY) < CALL_RANGE) inRange.add(id);
   });
 
-  // 範囲内で未接続 → call開始（ID文字列比較で片側だけofferを出す）
+  // 範囲内で未接続・未発信 → call開始
   inRange.forEach(id => {
-    if (!peerConns.has(id) && myId < id) callPeer(id);
+    if (!peerConns.has(id) && !callingPeers.has(id) && myId < id) {
+      callingPeers.add(id);
+      callPeer(id).finally(() => callingPeers.delete(id));
+    }
   });
 
   // 範囲外になった → 切断
