@@ -1462,76 +1462,95 @@ function buildMap(wW, wH) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-//  入力管理
+//  入力管理（数値フラグ方式 ― Setを使わない）
 // ══════════════════════════════════════════════════════════════════
 
-const keys     = new Set();
-const vpadKeys = new Set();
+// 移動方向フラグ（各方向につき +1 で押下、-1 でリセット。0=停止）
+const moveDir = { up: 0, down: 0, left: 0, right: 0 };
+const vpadKeys = new Set();  // バーチャルパッド用（別管理）
+let   dashOn   = false;
 
-// チャット欄・モーダル等にフォーカス中かどうか
+// フォーカス確認：input/textarea等にいるか
 function isMovementBlocked() {
-  const el  = document.activeElement;
-  if (!el) return false;
+  const el = document.activeElement;
+  if (!el || el === document.body) return false;
   const tag = el.tagName;
   return tag === "INPUT" || tag === "TEXTAREA"
-      || tag === "BUTTON" || tag === "SELECT"
-      || el.closest(".modal-overlay") !== null;  // モーダル内要素も対象
+      || tag === "BUTTON" || tag === "SELECT";
 }
 
-// ── キーボード ────────────────────────────────────────────────────
+// 全移動フラグをリセット
+function resetMove() {
+  moveDir.up = moveDir.down = moveDir.left = moveDir.right = 0;
+  dashOn = false;
+}
+
+// キーと方向のマッピング
+function keyToDir(key) {
+  if (key === "ArrowUp"    || key === "w" || key === "W") return "up";
+  if (key === "ArrowDown"  || key === "s" || key === "S") return "down";
+  if (key === "ArrowLeft"  || key === "a" || key === "A") return "left";
+  if (key === "ArrowRight" || key === "d" || key === "D") return "right";
+  return null;
+}
+
 window.addEventListener("keydown", e => {
-  // フォーカス中は追加しない
-  if (isMovementBlocked()) {
-    keys.clear();
-    return;
-  }
-  // Enterはチャット欄にフォーカスするだけ（keysには追加しない）
+  // フォーカス中は全リセット
+  if (isMovementBlocked()) { resetMove(); return; }
+
+  // Enterでチャット欄にフォーカス
   if (e.key === "Enter") {
     e.preventDefault();
-    const ci = document.getElementById("chat-input");
-    if (ci) ci.focus();
+    resetMove();
+    document.getElementById("chat-input")?.focus();
     return;
   }
+
+  if (e.key === "Shift") { dashOn = true; return; }
   if (e.key.startsWith("Arrow")) e.preventDefault();
-  keys.add(e.key);
+
+  const dir = keyToDir(e.key);
+  if (dir) moveDir[dir] = 1;
 });
 
-window.addEventListener("keyup", e => keys.delete(e.key));
+window.addEventListener("keyup", e => {
+  if (e.key === "Shift") { dashOn = false; return; }
+  const dir = keyToDir(e.key);
+  if (dir) moveDir[dir] = 0;
+});
 
-// ウィンドウ・タブの状態変化で全クリア
-["blur","focus"].forEach(ev =>
-  window.addEventListener(ev, () => keys.clear())
-);
-document.addEventListener("visibilitychange", () => keys.clear());
-
-// フォーカス変化を監視して確実にクリア
-document.addEventListener("focusin", () => {
-  if (isMovementBlocked()) keys.clear();
+// ウィンドウ・タブ切替・フォーカス変化で全リセット
+window.addEventListener("blur",    resetMove);
+window.addEventListener("focus",   resetMove);
+document.addEventListener("visibilitychange", resetMove);
+document.addEventListener("focusin",  () => { if (isMovementBlocked()) resetMove(); });
+document.addEventListener("focusout", () => {
+  // INPUTからフォーカスが外れた直後もリセット
+  setTimeout(resetMove, 0);
 });
 
 // ── バーチャルパッド（ゲーム開始後に初期化） ─────────────────────
 function initVpad() {
-  [
-    ["vp-up",    "ArrowUp"],
-    ["vp-down",  "ArrowDown"],
-    ["vp-left",  "ArrowLeft"],
-    ["vp-right", "ArrowRight"],
-  ].forEach(([elId, key]) => {
+  const map = {
+    "vp-up":    "up",
+    "vp-down":  "down",
+    "vp-left":  "left",
+    "vp-right": "right",
+  };
+  Object.entries(map).forEach(([elId, dir]) => {
     const el = document.getElementById(elId);
     if (!el) return;
-    const on  = () => { if (!isMovementBlocked()) vpadKeys.add(key); };
-    const off = () => vpadKeys.delete(key);
-    el.addEventListener("pointerdown",   on);
-    el.addEventListener("pointerup",     off);
-    el.addEventListener("pointerleave",  off);
-    el.addEventListener("pointercancel", off);
+    el.addEventListener("pointerdown",   () => { if (!isMovementBlocked()) vpadKeys.add(dir); });
+    el.addEventListener("pointerup",     () => vpadKeys.delete(dir));
+    el.addEventListener("pointerleave",  () => vpadKeys.delete(dir));
+    el.addEventListener("pointercancel", () => vpadKeys.delete(dir));
   });
 }
 
 // ── チャット ─────────────────────────────────────────────────────
 document.getElementById("chat-send").addEventListener("click", sendChat);
 document.getElementById("chat-input").addEventListener("keydown", e => {
-  e.stopPropagation();   // ゲームのkeydownに伝播させない
+  e.stopPropagation();
   if (e.key === "Enter")  { e.preventDefault(); sendChat(); }
   if (e.key === "Escape") { e.preventDefault(); document.getElementById("chat-input").blur(); }
 });
@@ -1540,9 +1559,9 @@ function sendChat() {
   const inp  = document.getElementById("chat-input");
   const text = clientSanitize(inp.value, 60);
   inp.value = "";
-  inp.blur();
-  keys.clear();
+  resetMove();
   vpadKeys.clear();
+  inp.blur();
   if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
   spawnBubble(myId, myNick, myAvatar, text, myX, myY);
@@ -1634,21 +1653,20 @@ function loop(now) {
   requestAnimationFrame(loop);
   if (!tileMap) return;
 
-  // ── 移動（フォーカス中は完全停止）────────────────────────────
+  // ── 移動 ────────────────────────────────────────────────────
   if (!isMovementBlocked()) {
-    const allKeys = k => keys.has(k) || vpadKeys.has(k);
-    const spd = keys.has("Shift") ? CFG.DASH_SPD : CFG.MOVE_SPD;
+    const spd = dashOn ? CFG.DASH_SPD : CFG.MOVE_SPD;
     let dx = 0, dy = 0;
-    if (allKeys("ArrowUp")    || allKeys("w") || allKeys("W")) dy -= 1;
-    if (allKeys("ArrowDown")  || allKeys("s") || allKeys("S")) dy += 1;
-    if (allKeys("ArrowLeft")  || allKeys("a") || allKeys("A")) dx -= 1;
-    if (allKeys("ArrowRight") || allKeys("d") || allKeys("D")) dx += 1;
+    // キーボード
+    if (moveDir.up    || vpadKeys.has("up"))    dy -= 1;
+    if (moveDir.down  || vpadKeys.has("down"))  dy += 1;
+    if (moveDir.left  || vpadKeys.has("left"))  dx -= 1;
+    if (moveDir.right || vpadKeys.has("right")) dx += 1;
     if (dx && dy) { dx *= 0.707; dy *= 0.707; }
     myX = Math.max(0, Math.min(worldW, myX + dx * spd));
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
   } else {
-    // フォーカス中はキーをクリアし続ける
-    keys.clear();
+    resetMove();
   }
 
   // ── 送信 ────────────────────────────────────────────────────
