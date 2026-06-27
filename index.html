@@ -209,28 +209,49 @@ canvas#world { display: block; }
   text-align: right; margin-top: 3px; letter-spacing: .06em;
 }
 
-/* スマホ：ミニマップを左下に移動・縮小 */
+/* スマホ：底部レイアウト全面整理
+   ┌──────────────────────────────┐
+   │  ミニマップ(左)   vpad(右)   │  ← bottom: 76px
+   ├──────────────────────────────┤
+   │      チャット入力欄          │  ← bottom: 16px
+   └──────────────────────────────┘
+*/
 @media (hover: none) and (pointer: coarse) {
+
+  /* ミニマップ：左下・チャット欄の上 */
   #mm-wrap {
     right: auto;
-    left: 16px;
-    bottom: 16px;
+    left: 8px;
+    bottom: 76px;
   }
   #mm-wrap canvas {
-    width: 120px !important;
-    height: 90px  !important;
+    width: 110px !important;
+    height: 82px  !important;
   }
-  .mm-label { text-align: left; }
+  .mm-label { text-align: left; font-size: .58rem; }
 
-  /* チャット欄：バーチャルパッドと重ならないよう左寄せ＋幅を制限 */
+  /* バーチャルパッド：右下・チャット欄の上 */
+  #vpad {
+    display: block;
+    right: 8px;
+    bottom: 76px;
+  }
+
+  /* チャット欄：横幅いっぱい・最下部 */
   #chat-wrap {
-    left: 16px;
-    right: 172px;   /* vpad分（160px + 余白）を確保 */
+    left: 8px;
+    right: 8px;
+    bottom: 16px;
     transform: none;
     width: auto;
   }
 
-  /* 操作ヒントはスマホ非表示（既存）*/
+  /* レーダー調整 */
+  #radar-S { bottom: 260px; }
+  #radar-E { right: 12px; top: 30%; }
+
+  /* 操作ヒント非表示 */
+  #hint { display: none; }
 }
 
 /* ── レーダー：4方向固定パネル ── */
@@ -266,12 +287,6 @@ canvas#world { display: block; }
 #radar-W { left: 12px; top: 50%; transform: translateY(-50%); }
 /* 右：右中央 */
 #radar-E { right: 12px; top: 50%; transform: translateY(-50%); }
-
-/* スマホ：右レーダーをバーチャルパッドと重ならないよう上にずらす */
-@media (hover: none) and (pointer: coarse) {
-  #radar-E { right: 12px; top: 35%; }
-  #radar-S { bottom: 180px; }
-}
 
 /* ── チャット吹き出し群（Canvas外DOM） ── */
 #bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
@@ -974,7 +989,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
+  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
