@@ -989,7 +989,7 @@ const CFG = {
   // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
   WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
   // ▼ GAS デプロイURL
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
+  GAS_URL: "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec",
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1324,26 +1324,17 @@ function _doConnect() {
     if (m.type === "snapshot") {
       totalOnline = m.total;
       const prevIds = new Set(others.keys());
+      // サーバーの座標をそのまま反映（補間なし）
+      const newIds = new Set();
       m.players.forEach(p => {
         if (p.id === myId) return;
+        newIds.add(p.id);
         const prev = others.get(p.id);
         if (prev) {
-          // 座標を補間：急激なジャンプを防ぐ（最大200px/tickで追従）
-          const MAX_JUMP = 200;
-          const dx = p.x - prev.x;
-          const dy = p.y - prev.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > MAX_JUMP) {
-            // 大きすぎるジャンプ（ワープ等）はそのまま反映
-            prev.x = p.x; prev.y = p.y;
-          } else {
-            // 通常移動は補間（0.6の割合で追従）
-            prev.x = prev.x + dx * 0.6;
-            prev.y = prev.y + dy * 0.6;
-          }
-          prev.nick   = p.nick;
-          prev.avatar = p.avatar;
-          prev.title  = p.title;
+          prev.x = p.x; prev.y = p.y;
+          prev.nick    = p.nick;
+          prev.avatar  = p.avatar;
+          prev.title   = p.title;
           prev.hobbies = p.hobbies;
         } else {
           others.set(p.id, { ...p });
@@ -1351,7 +1342,7 @@ function _doConnect() {
       });
       // 消えたプレイヤーを削除
       others.forEach((_, id) => {
-        if (!m.players.find(p => p.id === id)) others.delete(id);
+        if (!newIds.has(id)) others.delete(id);
       });
       checkCallRange(prevIds);
     }
@@ -2106,28 +2097,10 @@ async function ensureLocalStream() {
 }
 
 // ── 通話範囲チェック ────────────────────────────────────────────
-// calling中のpeerIdセット（重複callPeer防止）
 const callingPeers = new Set();
 
 function checkCallRange(prevIds) {
-  const inRange = new Set();
-  others.forEach((p, id) => {
-    if (Math.hypot(p.x - myX, p.y - myY) < CALL_RANGE) inRange.add(id);
-  });
-
-  // 範囲内で未接続・未発信 → call開始
-  inRange.forEach(id => {
-    if (!peerConns.has(id) && !callingPeers.has(id) && myId < id) {
-      callingPeers.add(id);
-      callPeer(id).finally(() => callingPeers.delete(id));
-    }
-  });
-
-  // 範囲外になった → 切断
-  peerConns.forEach((pc, id) => {
-    if (!inRange.has(id)) hangupPeer(id);
-  });
-
+  // 自動通話は無効化（手動で通話ボタンを押す方式に変更）
   updateCallBar();
 }
 
