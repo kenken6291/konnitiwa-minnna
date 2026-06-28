@@ -847,7 +847,6 @@ canvas#world { display: block; }
     <div>🌐 オンライン <span class="hud-val" id="h-online">0</span> 人</div>
     <div>👁 描画中 <span class="hud-val" id="h-vis">0</span> 人</div>
     <div>📍 <span id="h-pos">-,-</span></div>
-    <div style="font-size:.65rem;color:#f04a4a;margin-top:4px" id="dbg-move">停止中</div>
   </div>
 
   <!-- 接続バナー -->
@@ -1364,22 +1363,41 @@ function _doConnect() {
     if (m.type === "snapshot") {
       totalOnline = m.total;
       const prevIds = new Set(others.keys());
-      // サーバーの座標をそのまま反映（補間なし）
-      const newIds = new Set();
+      const newIds  = new Set();
+
       m.players.forEach(p => {
         if (p.id === myId) return;
         newIds.add(p.id);
         const prev = others.get(p.id);
         if (prev) {
-          prev.x = p.x; prev.y = p.y;
+          // 1snapshotあたりの最大移動距離を制限（急なジャンプを防ぐ）
+          // サーバーtick=50ms、速度=最大9px/frame×60fps = 540px/sec
+          // 50ms間の最大移動量 = 約27px → 余裕を持って60pxを上限に
+          const MAX_STEP = 60;
+          const dx = p.x - prev.x;
+          const dy = p.y - prev.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist <= MAX_STEP) {
+            // 通常移動：そのまま反映
+            prev.x = p.x;
+            prev.y = p.y;
+          } else {
+            // 大きすぎる移動（遅延バースト or ワープ）：方向はそのまま、距離を制限
+            prev.x = Math.round(prev.x + (dx / dist) * MAX_STEP);
+            prev.y = Math.round(prev.y + (dy / dist) * MAX_STEP);
+          }
           prev.nick    = p.nick;
           prev.avatar  = p.avatar;
           prev.title   = p.title;
           prev.hobbies = p.hobbies;
+          // サーバーの真の座標も保持（次フレームの追従用）
+          prev.serverX = p.x;
+          prev.serverY = p.y;
         } else {
-          others.set(p.id, { ...p });
+          others.set(p.id, { ...p, serverX: p.x, serverY: p.y });
         }
       });
+
       // 消えたプレイヤーを削除
       others.forEach((_, id) => {
         if (!newIds.has(id)) others.delete(id);
@@ -1595,10 +1613,31 @@ function initVpad() {
   Object.entries(map).forEach(([elId, dir]) => {
     const el = document.getElementById(elId);
     if (!el) return;
-    el.addEventListener("pointerdown",   () => vpadKeys.add(dir));
-    el.addEventListener("pointerup",     () => vpadKeys.delete(dir));
-    el.addEventListener("pointerleave",  () => vpadKeys.delete(dir));
-    el.addEventListener("pointercancel", () => vpadKeys.delete(dir));
+
+    // タッチ開始：そのボタンの方向を追加
+    el.addEventListener("touchstart", e => {
+      e.preventDefault(); // スクロール防止
+      vpadKeys.add(dir);
+    }, { passive: false });
+
+    // タッチ終了・キャンセル：必ず解放
+    const release = () => vpadKeys.delete(dir);
+    el.addEventListener("touchend",    release);
+    el.addEventListener("touchcancel", release);
+  });
+
+  // 画面全体のtouchend時に全vpadKeysをクリア（安全策）
+  document.addEventListener("touchend", () => {
+    // vpadボタン以外でtouchendが来た場合もクリア
+    setTimeout(() => {
+      // 実際にまだ押されているボタンがなければクリア
+      const vpadIds = ["vp-up","vp-down","vp-left","vp-right"];
+      const anyPressed = vpadIds.some(id => {
+        const el = document.getElementById(id);
+        return el && el.matches(":active");
+      });
+      if (!anyPressed) vpadKeys.clear();
+    }, 50);
   });
 }
 
@@ -1629,8 +1668,8 @@ function sendChat() {
 
 // ── 移動量計算（ゲームループから呼ぶ） ──────────────────────────
 function calcMoveDelta() {
-  if (modalOpen) return { dx: 0, dy: 0, reason: "modal" };
-  if (isMovementBlocked()) return { dx: 0, dy: 0, reason: "blocked" };
+  if (modalOpen) return { dx: 0, dy: 0 };
+  if (isMovementBlocked()) return { dx: 0, dy: 0 };
   let dx = 0, dy = 0;
   if (pressedKeys.has("ArrowUp")    || pressedKeys.has("w") || pressedKeys.has("W")) dy -= 1;
   if (pressedKeys.has("ArrowDown")  || pressedKeys.has("s") || pressedKeys.has("S")) dy += 1;
@@ -1641,8 +1680,7 @@ function calcMoveDelta() {
   if (vpadKeys.has("left"))  dx -= 1;
   if (vpadKeys.has("right")) dx += 1;
   if (dx && dy) { dx *= 0.707; dy *= 0.707; }
-  const reason = `pk=[${[...pressedKeys].join(",")}] vk=[${[...vpadKeys].join(",")}]`;
-  return { dx, dy, reason };
+  return { dx, dy };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1727,20 +1765,11 @@ function loop(now) {
   if (!tileMap) return;
 
   // ── 移動 ────────────────────────────────────────────────────
-  const { dx, dy, reason } = calcMoveDelta();
+  const { dx, dy } = calcMoveDelta();
   if (dx !== 0 || dy !== 0) {
     const spd = dashOn ? CFG.DASH_SPD : CFG.MOVE_SPD;
     myX = Math.max(0, Math.min(worldW, myX + dx * spd));
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
-    // デバッグ：移動した原因をHUDに表示
-    const dbg = document.getElementById("dbg-move");
-    if (dbg) dbg.textContent = `移動: ${reason}`;
-  } else {
-    const dbg = document.getElementById("dbg-move");
-    if (dbg && reason !== "modal" && reason !== "blocked") {
-      // 停止中でもキー状態を表示
-      if (dbg.textContent !== "停止中") dbg.textContent = "停止中";
-    }
   }
 
   // 座標は整数に丸める（浮動小数点の誤差で送信し続けるのを防ぐ）
@@ -1754,8 +1783,28 @@ function loop(now) {
       lastSend  = now;
       lastSentX = myX;
       lastSentY = myY;
+      // デバッグ：送信した事実を記録
+      const dbg = document.getElementById("dbg-move");
+      if (dbg) dbg.textContent = `送信: ${myX},${myY} | ${[...pressedKeys].join(",")||"none"} vp:${[...vpadKeys].join(",")||"none"} mo:${modalOpen}`;
     }
   }
+
+  // ── 他プレイヤー座標の追従（毎フレーム少しずつサーバー座標に近づける）
+  others.forEach(p => {
+    if (p.serverX === undefined) return;
+    const dx = p.serverX - p.x;
+    const dy = p.serverY - p.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1) {
+      p.x = p.serverX;
+      p.y = p.serverY;
+    } else {
+      // 1フレームで最大20pxずつ追従
+      const step = Math.min(dist, 20);
+      p.x = Math.round(p.x + (dx / dist) * step);
+      p.y = Math.round(p.y + (dy / dist) * step);
+    }
+  });
 
   // ── カメラ ──────────────────────────────────────────────────
   const vw = canvas.width, vh = canvas.height;
@@ -2450,7 +2499,7 @@ function hangupAll() {
 // ── 通話バー更新 ──────────────────────────────────────────────────
 function updateCallBar() {
   const bar   = document.getElementById("call-bar");
-  const count = peerConns.size;
+  const count = peerStreams.size;   // 実際に映像/音声を受信中の数
   if (count > 0 || localStream) {
     bar.classList.add("active");
     document.getElementById("call-label").textContent = `通話中 ${count}人`;
