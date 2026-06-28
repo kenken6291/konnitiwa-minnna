@@ -847,6 +847,7 @@ canvas#world { display: block; }
     <div>🌐 オンライン <span class="hud-val" id="h-online">0</span> 人</div>
     <div>👁 描画中 <span class="hud-val" id="h-vis">0</span> 人</div>
     <div>📍 <span id="h-pos">-,-</span></div>
+    <div style="font-size:.65rem;color:#f04a4a;margin-top:4px" id="dbg-move">停止中</div>
   </div>
 
   <!-- 接続バナー -->
@@ -1628,23 +1629,20 @@ function sendChat() {
 
 // ── 移動量計算（ゲームループから呼ぶ） ──────────────────────────
 function calcMoveDelta() {
-  // モーダル表示中は完全停止
-  if (modalOpen) return { dx: 0, dy: 0 };
-  // テキスト入力中は停止
-  if (isMovementBlocked()) return { dx: 0, dy: 0 };
+  if (modalOpen) return { dx: 0, dy: 0, reason: "modal" };
+  if (isMovementBlocked()) return { dx: 0, dy: 0, reason: "blocked" };
   let dx = 0, dy = 0;
-  // キーボード
   if (pressedKeys.has("ArrowUp")    || pressedKeys.has("w") || pressedKeys.has("W")) dy -= 1;
   if (pressedKeys.has("ArrowDown")  || pressedKeys.has("s") || pressedKeys.has("S")) dy += 1;
   if (pressedKeys.has("ArrowLeft")  || pressedKeys.has("a") || pressedKeys.has("A")) dx -= 1;
   if (pressedKeys.has("ArrowRight") || pressedKeys.has("d") || pressedKeys.has("D")) dx += 1;
-  // バーチャルパッド
   if (vpadKeys.has("up"))    dy -= 1;
   if (vpadKeys.has("down"))  dy += 1;
   if (vpadKeys.has("left"))  dx -= 1;
   if (vpadKeys.has("right")) dx += 1;
   if (dx && dy) { dx *= 0.707; dy *= 0.707; }
-  return { dx, dy };
+  const reason = `pk=[${[...pressedKeys].join(",")}] vk=[${[...vpadKeys].join(",")}]`;
+  return { dx, dy, reason };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1729,11 +1727,20 @@ function loop(now) {
   if (!tileMap) return;
 
   // ── 移動 ────────────────────────────────────────────────────
-  const { dx, dy } = calcMoveDelta();
+  const { dx, dy, reason } = calcMoveDelta();
   if (dx !== 0 || dy !== 0) {
     const spd = dashOn ? CFG.DASH_SPD : CFG.MOVE_SPD;
     myX = Math.max(0, Math.min(worldW, myX + dx * spd));
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
+    // デバッグ：移動した原因をHUDに表示
+    const dbg = document.getElementById("dbg-move");
+    if (dbg) dbg.textContent = `移動: ${reason}`;
+  } else {
+    const dbg = document.getElementById("dbg-move");
+    if (dbg && reason !== "modal" && reason !== "blocked") {
+      // 停止中でもキー状態を表示
+      if (dbg.textContent !== "停止中") dbg.textContent = "停止中";
+    }
   }
 
   // 座標は整数に丸める（浮動小数点の誤差で送信し続けるのを防ぐ）
