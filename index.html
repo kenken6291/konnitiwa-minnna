@@ -2576,11 +2576,27 @@ function updateBadgeNote() {
 }
 
 function openBadgeModal() {
+  console.log("[Badge] openBadgeModal called");
   modalOpen = true;
   pressedKeys.clear();
   vpadKeys.clear();
-  buildBadgeModal();
-  document.getElementById("badge-modal").classList.remove("hidden");
+  try {
+    buildBadgeModal();
+  } catch(e) {
+    console.error("[Badge] buildBadgeModal error:", e);
+    alert("名札エラー: " + e.message);
+    modalOpen = false;
+    return;
+  }
+  const el = document.getElementById("badge-modal");
+  console.log("[Badge] modal element:", el);
+  if (el) {
+    el.classList.remove("hidden");
+    console.log("[Badge] modal opened, classList:", el.className);
+  } else {
+    console.error("[Badge] badge-modal element not found!");
+    alert("badge-modal が見つかりません");
+  }
 }
 function closeBadgeModal() {
   document.getElementById("badge-modal").classList.add("hidden");
