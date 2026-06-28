@@ -1628,8 +1628,10 @@ function sendChat() {
 
 // ── 移動量計算（ゲームループから呼ぶ） ──────────────────────────
 function calcMoveDelta() {
-  // モーダル表示中・フォーカス中は移動しない
-  if (modalOpen || isMovementBlocked()) return { dx: 0, dy: 0 };
+  // モーダル表示中は完全停止
+  if (modalOpen) return { dx: 0, dy: 0 };
+  // テキスト入力中は停止
+  if (isMovementBlocked()) return { dx: 0, dy: 0 };
   let dx = 0, dy = 0;
   // キーボード
   if (pressedKeys.has("ArrowUp")    || pressedKeys.has("w") || pressedKeys.has("W")) dy -= 1;
@@ -2092,6 +2094,8 @@ function updateHUD() {
 // ══════════════════════════════════════════════════════════════════
 function openPasscodeModal() {
   modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
   document.getElementById("passcode-disp").textContent =
     myPasscode || "--------";
   document.getElementById("passcode-modal").classList.remove("hidden");
@@ -2174,6 +2178,8 @@ function checkCallRange(prevIds) {
 // ── 通話モーダル ─────────────────────────────────────────────────
 function openCallModal() {
   modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
   buildNearbyList();
   document.getElementById("call-modal").classList.remove("hidden");
 }
@@ -2497,6 +2503,8 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════
 function openExitModal() {
   modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
   document.getElementById("exit-nick-label").textContent = myNick || "あなた";
   document.getElementById("exit-modal").classList.remove("hidden");
 }
@@ -2639,6 +2647,8 @@ function updateBadgeNote() {
 
 function openBadgeModal() {
   modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
   buildBadgeModal();
   document.getElementById("badge-modal").classList.remove("hidden");
 }
@@ -2747,6 +2757,8 @@ function buildWarpList() {
 
 function openWarpModal() {
   modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
   buildWarpList();
   document.getElementById("warp-modal").classList.remove("hidden");
 }
