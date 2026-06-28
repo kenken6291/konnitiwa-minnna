@@ -1537,9 +1537,10 @@ function isMovementBlocked() {
 // モーダルが開いているかフラグ（この間はresetMoveを呼ばない）
 let modalOpen = false;
 
-// 全移動をリセット（vpadKeysは触らない）
+// 全移動をリセット
 function resetMove() {
   pressedKeys.clear();
+  vpadKeys.clear();
   dashOn = false;
 }
 
@@ -1629,7 +1630,8 @@ function sendChat() {
 
 // ── 移動量計算（ゲームループから呼ぶ） ──────────────────────────
 function calcMoveDelta() {
-  if (isMovementBlocked()) return { dx: 0, dy: 0 };
+  // モーダル表示中・フォーカス中は移動しない
+  if (modalOpen || isMovementBlocked()) return { dx: 0, dy: 0 };
   let dx = 0, dy = 0;
   // キーボード
   if (pressedKeys.has("ArrowUp")    || pressedKeys.has("w") || pressedKeys.has("W")) dy -= 1;
