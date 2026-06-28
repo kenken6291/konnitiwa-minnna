@@ -407,21 +407,23 @@ canvas#world { display: block; }
 }
 .hud-btn:hover { border-color: var(--chochin); background: rgba(232,146,74,0.1); }
 
-/* スマホ：2行に折り返し・ボタンを小さく */
+/* スマホ：絵文字のみ・1行・小さく */
 @media (hover: none) and (pointer: coarse) {
   #hud-btns {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: center;
     max-width: 100vw;
-    padding: 0 4px;
-    gap: 4px;
+    padding: 0 2px;
+    gap: 3px;
     top: 8px;
   }
   .hud-btn {
-    font-size: .72rem;
-    padding: 6px 10px;
-    gap: 3px;
+    font-size: .82rem;
+    padding: 6px 8px;
+    gap: 0;
   }
+  /* テキスト部分を非表示にして絵文字だけ残す */
+  .hud-btn .hud-label { display: none; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -883,12 +885,12 @@ canvas#world { display: block; }
 
   <!-- HUD ボタン群 -->
   <div id="hud-btns">
-    <button class="hud-btn" id="btn-badge">🪪 名札</button>
-    <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
-    <button class="hud-btn" id="btn-show-code">🔑 コード</button>
-    <button class="hud-btn" id="btn-call">📞 通話</button>
-    <button class="hud-btn" id="btn-sns">📇 名刺</button>
-    <button class="hud-btn" id="btn-exit">🚪 退出</button>
+    <button class="hud-btn" id="btn-badge">🪪<span class="hud-label"> 名札</span></button>
+    <button class="hud-btn" id="btn-warp">🌀<span class="hud-label"> ワープ</span></button>
+    <button class="hud-btn" id="btn-show-code">🔑<span class="hud-label"> コード</span></button>
+    <button class="hud-btn" id="btn-call">📞<span class="hud-label"> 通話</span></button>
+    <button class="hud-btn" id="btn-sns">📇<span class="hud-label"> 名刺</span></button>
+    <button class="hud-btn" id="btn-exit">🚪<span class="hud-label"> 退出</span></button>
   </div>
 
   <!-- ══ 通話招待モーダル（Zoom/Meet/LINE等のURL共有）═══════════ -->
