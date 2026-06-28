@@ -293,15 +293,17 @@ canvas#world { display: block; }
 .bubble {
   position: absolute;
   background: var(--panel);
-  border: 1px solid var(--border);
+  border: 1px solid var(--chochin);
   border-radius: 12px 12px 12px 2px;
-  padding: 6px 12px;
-  font-size: .82rem; color: var(--shoji);
-  max-width: 200px; word-break: break-all;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  padding: 7px 13px;
+  font-size: .85rem; color: var(--shoji);
+  max-width: min(240px, 70vw);
+  word-break: break-all;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.6);
   white-space: pre-wrap;
   animation: bubblePop .25s ease-out;
   pointer-events: none;
+  z-index: 160;
 }
 @keyframes bubblePop {
   from { transform: scale(.7) translateY(6px); opacity:0; }
@@ -407,23 +409,34 @@ canvas#world { display: block; }
 }
 .hud-btn:hover { border-color: var(--chochin); background: rgba(232,146,74,0.1); }
 
-/* スマホ：絵文字のみ・1行・小さく */
+/* スマホ：絵文字のみ・1行・コンパクト */
 @media (hover: none) and (pointer: coarse) {
   #hud-btns {
     flex-wrap: nowrap;
-    justify-content: center;
-    max-width: 100vw;
-    padding: 0 2px;
-    gap: 3px;
+    justify-content: flex-end;  /* 右寄せにしてHUDパネルと重ならない */
+    max-width: calc(100vw - 160px); /* HUDパネル幅を避ける */
+    left: auto;
+    right: 0;
+    transform: none;
+    padding: 0 4px;
+    gap: 2px;
     top: 8px;
   }
   .hud-btn {
-    font-size: .82rem;
-    padding: 6px 8px;
+    font-size: 1rem;
+    padding: 5px 7px;
     gap: 0;
+    min-width: unset;
   }
   /* テキスト部分を非表示にして絵文字だけ残す */
   .hud-btn .hud-label { display: none; }
+
+  /* 接続バナーもコンパクトに */
+  #banner {
+    top: 8px;
+    font-size: .68rem;
+    padding: 5px 10px;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -2102,20 +2115,35 @@ function updateBubbles(vw, vh, now) {
       : 1;
     b.el.style.opacity = alpha.toFixed(2);
 
-    // idから毎フレーム座標を解決（固定座標を持たない）
+    // idから毎フレーム座標を解決
     let wx, wy;
     if (b.id === myId) {
       wx = myX; wy = myY;
     } else {
       const peer = others.get(b.id);
       if (peer) { wx = peer.x; wy = peer.y; }
-      else { b.el.style.opacity = "0"; continue; } // 相手が見えない間は非表示
+      else { b.el.style.opacity = "0"; continue; }
     }
 
+    // キャラクターのスクリーン座標
     const sx = wx - camX;
-    const sy = wy - camY - CFG.PLAYER_R - 54;
-    b.el.style.left = (sx - 100) + "px";
-    b.el.style.top  = sy + "px";
+    const sy = wy - camY;
+
+    // 吹き出しの幅を取得（初回は200px推定）
+    const bw = b.el.offsetWidth || 200;
+
+    // キャラクター中央揃え・画面端クランプ
+    const margin = 8;
+    const topOffset = CFG.PLAYER_R + 60; // キャラクター上方向
+    let bx = sx - bw / 2;
+    let by = sy - topOffset - (b.el.offsetHeight || 36);
+
+    // 画面端にはみ出さないようにクランプ
+    bx = Math.max(margin, Math.min(vw - bw - margin, bx));
+    by = Math.max(50, by); // 上端（HUDボタンの下）より下に
+
+    b.el.style.left = bx + "px";
+    b.el.style.top  = by + "px";
   }
 }
 
