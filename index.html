@@ -1056,7 +1056,7 @@ const CFG = {
   WS_SHARDS: [
     "wss://konnitiwa-minnna-server-production.up.railway.app",
   ],
-  GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
+  // GAS_URLはサーバー側の環境変数で管理（セキュリティのためフロントに置かない）
 };
 
 // ══════════════════════════════════════════════════════════════════
@@ -1081,31 +1081,18 @@ let sessionStart = 0;
 let myPasscode = localStorage.getItem("konnitiwa_code") || "";
 
 // ── GAS HTTP ユーティリティ ─────────────────────────────────────
-const GAS_CONFIGURED = CFG.GAS_URL && !CFG.GAS_URL.includes("YOUR_DEPLOYMENT");
-
-async function gasPost(body) {
-  if (!GAS_CONFIGURED) return;
-  try {
-    await fetch(CFG.GAS_URL, {
-      method: "POST",
-      mode:   "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body:    JSON.stringify(body),
-    });
-  } catch { /* 記録失敗は無視 */ }
+// ── GAS ログ送信（サーバー経由・GAS URLはサーバー側環境変数で管理） ──
+// フロントは直接GASにアクセスしない（セキュリティ対策）
+function gasLog(body) {
+  if (!ws || ws.readyState !== 1) return;
+  ws.send(JSON.stringify({ type: "gas_log", payload: body }));
 }
 
-async function gasGet(params) {
-  if (!GAS_CONFIGURED) return null;
-  try {
-    const q = new URLSearchParams(params).toString();
-    // タイムアウト5秒
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
-    const res = await fetch(`${CFG.GAS_URL}?${q}`, { signal: ctrl.signal });
-    clearTimeout(timer);
-    return await res.json();
-  } catch { return null; }
+// beforeunload時のみsendBeaconでサーバーに送信（WSが閉じている場合）
+function gasLogBeacon(body) {
+  if (ws && ws.readyState === 1) {
+    try { ws.send(JSON.stringify({ type: "gas_log", payload: body })); } catch {}
+  }
 }
 
 // ── エリア名判定（チャットログ記録用）────────────────────────────
@@ -1212,38 +1199,7 @@ async function gasRegisterAndEnter(nick, avatar, restoreCode) {
     localStorage.setItem("konnitiwa_uid", gasUserId);
   }
 
-  // GAS未設定なら即接続（ブロックしない）
-  if (!GAS_CONFIGURED) {
-    document.getElementById("btn-enter").disabled = false;
-    connect(CFG.WS_SHARDS[Math.floor(Math.random()*CFG.WS_SHARDS.length)], restoreCode);
-    return;
-  }
-
-  // GAS設定済み：名札を読み込んでから接続
-  // タイムアウト保険としてPromise.race使用
-  try {
-    const loaded = await Promise.race([
-      gasGet({ action: "load_user", user_id: gasUserId }),
-      new Promise(r => setTimeout(() => r(null), 5000)),
-    ]);
-    if (loaded && loaded.ok && loaded.user) {
-      const u = loaded.user;
-      if (u.nick === nick) {
-        myProfile.title   = u.title   || "";
-        myProfile.hobbies = u.hobbies || [];
-      }
-    }
-  } catch { /* タイムアウト時も続行 */ }
-
-  // GASに登録/更新（非同期・待たない）
-  gasPost({
-    action: "register",
-    user_id: gasUserId,
-    nick, avatar,
-    title:   myProfile.title,
-    hobbies: myProfile.hobbies,
-  });
-
+  // GAS未設定でも即接続（サーバーがGASと通信する）
   document.getElementById("btn-enter").disabled = false;
   connect(CFG.WS_SHARDS[Math.floor(Math.random()*CFG.WS_SHARDS.length)], restoreCode);
 }
@@ -1328,7 +1284,7 @@ function _doConnect() {
 
       ws.send(JSON.stringify({ type: "issue_passcode" }));
 
-      gasPost({
+      gasLog({
         action: "access_log", user_id: gasUserId,
         nick: myNick, event: "join",
         session_min: 0, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
@@ -1338,6 +1294,16 @@ function _doConnect() {
     if (m.type === "passcode") {
       myPasscode = m.code;
       localStorage.setItem("konnitiwa_code", myPasscode);
+
+      // フロントから直接GASにパスコードを保存
+      if (gasUserId) {
+        gasLog({
+          action:   "save_passcode",
+          user_id:  gasUserId,
+          passcode: myPasscode,
+        });
+      }
+
       if (!localStorage.getItem("konnitiwa_code_shown")) {
         localStorage.setItem("konnitiwa_code_shown", "1");
         openPasscodeModal();
@@ -1428,7 +1394,7 @@ function _doConnect() {
     // GAS退室ログ
     if (sessionStart) {
       const sessionMin = Math.floor((Date.now() - sessionStart) / 60000);
-      gasPost({
+      gasLog({
         action: "access_log", user_id: gasUserId,
         nick: myNick, event: "leave",
         session_min: sessionMin,
@@ -1462,14 +1428,22 @@ function setBanner(txt, cls) {
 window.addEventListener("beforeunload", () => {
   clearTimeout(reconnectTimer);
   clearInterval(keepaliveTimer);
-  if (!sessionStart || !CFG.GAS_URL.includes("script.google.com")) return;
+  if (!sessionStart) return;
   const sessionMin = Math.floor((Date.now() - sessionStart) / 60000);
-  const body = JSON.stringify({
-    action: "access_log", user_id: gasUserId,
-    nick: myNick, event: "leave",
-    session_min: sessionMin, spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
-  });
-  navigator.sendBeacon(CFG.GAS_URL, new Blob([body], { type: "text/plain" }));
+  // WS経由でサーバーに退室ログを送信（サーバーがGASに転送）
+  if (ws && ws.readyState === 1) {
+    try {
+      ws.send(JSON.stringify({
+        type: "gas_log",
+        payload: {
+          action: "access_log", user_id: gasUserId,
+          nick: myNick, event: "leave",
+          session_min: sessionMin,
+          spawn_x: Math.floor(myX), spawn_y: Math.floor(myY),
+        }
+      }));
+    } catch {}
+  }
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -1655,7 +1629,7 @@ function sendChat() {
   if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
   spawnBubble(myId, myNick, myAvatar, text);
-  gasPost({
+  gasLog({
     action: "chat_log", user_id: gasUserId,
     nick: myNick, avatar: myAvatar,
     message: text,
@@ -2401,7 +2375,7 @@ document.getElementById("sns-send").addEventListener("click", () => {
   closeSNSModal();
   showToast(`📤 ${selectedSNS.label} の名刺を渡しました！`);
   // GAS記録
-  gasPost({
+  gasLog({
     action: "chat_log", user_id: gasUserId,
     nick: myNick, avatar: myAvatar,
     message: `[SNS名刺] ${selectedSNS.label}`,
@@ -2478,7 +2452,7 @@ function doExit() {
   // GAS：退室ログ
   const sessionMin = sessionStart
     ? Math.floor((Date.now() - sessionStart) / 60000) : 0;
-  gasPost({
+  gasLog({
     action: "access_log", user_id: gasUserId,
     nick: myNick, event: "leave",
     session_min: sessionMin,
@@ -2633,7 +2607,7 @@ document.getElementById("badge-save").addEventListener("click", () => {
     }));
   }
   // GAS：名札をスプレッドシートに永続保存
-  gasPost({
+  gasLog({
     action:   "update_badge",
     user_id:  gasUserId,
     title:    myProfile.title,
@@ -2749,7 +2723,7 @@ function doWarp(spot) {
       ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
     }
     // GAS：ワープ統計
-    gasPost({
+    gasLog({
       action:    "warp_stats",
       user_id:   gasUserId,
       nick:      myNick,
