@@ -2129,18 +2129,19 @@ function updateBubbles(vw, vh, now) {
     const sx = wx - camX;
     const sy = wy - camY;
 
-    // 吹き出しの幅を取得（初回は200px推定）
-    const bw = b.el.offsetWidth || 200;
+    // 吹き出しサイズ取得
+    const bw = b.el.offsetWidth  || 200;
+    const bh = b.el.offsetHeight || 40;
 
-    // キャラクター中央揃え・画面端クランプ
-    const margin = 8;
-    const topOffset = CFG.PLAYER_R + 60; // キャラクター上方向
+    // キャラクター中央揃え・キャラクターの真上に配置
+    const margin   = 8;
+    const hudH     = 60;  // HUDボタンの高さ分（上端余白）
     let bx = sx - bw / 2;
-    let by = sy - topOffset - (b.el.offsetHeight || 36);
+    let by = sy - CFG.PLAYER_R - bh - 12;  // キャラ上端から12px上
 
-    // 画面端にはみ出さないようにクランプ
+    // 画面端クランプ
     bx = Math.max(margin, Math.min(vw - bw - margin, bx));
-    by = Math.max(50, by); // 上端（HUDボタンの下）より下に
+    by = Math.max(hudH, by);  // HUDボタンより下に
 
     b.el.style.left = bx + "px";
     b.el.style.top  = by + "px";
