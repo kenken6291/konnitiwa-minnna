@@ -597,98 +597,72 @@ canvas#world { display: block; }
 /* ══════════════════════════════════════════════════════════════════
    通話コントロールバー（画面上部中央寄り）
 ══════════════════════════════════════════════════════════════════ */
-#call-bar {
-  position: fixed;
-  bottom: 64px; left: 50%; transform: translateX(-50%);
-  display: none;   /* 通話中のみ表示 */
-  gap: 8px;
-  align-items: center;
-  z-index: 300;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 8px 16px;
-}
-#call-bar.active { display: flex; }
-.call-btn {
-  width: 44px; height: 44px;
-  border-radius: 50%;
-  border: none;
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background .15s, transform .1s;
-}
-.call-btn:active { transform: scale(.92); }
-.call-btn.on  { background: rgba(74,200,120,0.25); }
-.call-btn.off { background: rgba(220,80,80,0.3); }
-#call-label {
-  font-size: .75rem; color: var(--text-dim); white-space: nowrap;
-}
+
+
+
 
 /* ══════════════════════════════════════════════════════════════════
    映像ウィンドウ群
 ══════════════════════════════════════════════════════════════════ */
-#video-dock {
-  position: fixed;
-  top: 60px; right: 16px;
-  display: flex; flex-direction: column; gap: 8px;
-  z-index: 150;
-}
-.video-tile {
-  position: relative;
-  width: 120px; height: 90px;
-  background: #0e1218;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-.video-tile video {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.video-tile .vtile-nick {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.6);
-  font-size: .65rem; color: #fff;
-  padding: 2px 6px;
-  text-align: center;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.video-tile .vtile-muted {
-  position: absolute; top: 4px; right: 4px;
-  font-size: .8rem;
-  opacity: .8;
-}
+
 
 /* ── 通話モーダル ── */
-#call-modal .modal-card { max-width: 360px; gap: 14px; }
-.nearby-list { display: flex; flex-direction: column; gap: 8px; }
-.nearby-item {
-  display: flex; align-items: center; gap: 12px;
+
+
+/* ══════════════════════════════════════════════════════════════════
+   SNS名刺モーダル
+══════════════════════════════════════════════════════════════════ */
+#sns-modal .modal-card { max-width: 380px; gap: 16px; }
+
+/* SNSプラットフォーム選択 */
+.sns-platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.sns-plt-btn {
   background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
+  border: 2px solid transparent;
   border-radius: var(--radius);
-  padding: 10px 14px;
+  padding: 10px 6px;
+  cursor: pointer;
+  text-align: center;
+  font-size: .78rem;
+  color: var(--text-dim);
+  transition: border-color .15s, background .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-.nearby-avatar { font-size: 1.8rem; }
-.nearby-info   { flex: 1; }
-.nearby-nick   { font-size: .9rem; font-weight: 700; color: var(--text); }
-.nearby-dist   { font-size: .72rem; color: var(--text-dim); margin-top: 2px; }
-.nearby-call-btn {
-  background: linear-gradient(135deg, #4acf80, #2a9f60);
-  border: none; border-radius: var(--radius);
-  color: #fff; font-size: .85rem; font-weight: 700;
-  padding: 8px 14px; cursor: pointer;
-  white-space: nowrap;
-  transition: opacity .2s;
+.sns-plt-btn .s-icon { font-size: 1.4rem; }
+.sns-plt-btn:hover    { border-color: var(--chochin); background: rgba(232,146,74,0.08); }
+.sns-plt-btn.selected { border-color: var(--chochin2); background: rgba(240,200,74,0.12); color: var(--chochin2); }
+
+/* SNS名刺受信通知 */
+.sns-toast {
+  position: fixed;
+  bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--chochin);
+  border-radius: 14px;
+  padding: 12px 18px;
+  z-index: 900;
+  display: flex; align-items: center; gap: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  animation: slideUp .3s ease-out;
+  max-width: min(360px, 92vw);
+  cursor: pointer;
 }
-.nearby-call-btn:hover   { opacity: .85; }
-.nearby-call-btn.calling { background: linear-gradient(135deg,#e86060,#c03030); }
-.no-nearby {
-  text-align: center; color: var(--text-dim);
-  font-size: .85rem; padding: 20px 0;
+@keyframes slideUp {
+  from { transform: translateX(-50%) translateY(20px); opacity:0; }
+  to   { transform: translateX(-50%) translateY(0);    opacity:1; }
+}
+.sns-toast .st-from  { font-size:.72rem; color:var(--text-dim); }
+.sns-toast .st-label { font-size:.95rem; font-weight:700; color:var(--chochin2); }
+.sns-toast .st-hint  { font-size:.68rem; color:var(--text-dim); margin-top:2px; }
+.sns-toast .st-open  {
+  background: linear-gradient(135deg, var(--chochin), var(--chochin2));
+  color: var(--ink); font-weight:700; font-size:.82rem;
+  border:none; border-radius:8px; padding:8px 14px; cursor:pointer;
+  white-space:nowrap; flex-shrink:0;
 }
 
 /* ── 退出ボタン ── */
@@ -895,25 +869,67 @@ canvas#world { display: block; }
     <button class="hud-btn" id="btn-warp">🌀 ワープ</button>
     <button class="hud-btn" id="btn-show-code">🔑 コード</button>
     <button class="hud-btn" id="btn-call">📞 通話</button>
+    <button class="hud-btn" id="btn-sns">📇 名刺</button>
     <button class="hud-btn" id="btn-exit">🚪 退出</button>
   </div>
 
-  <!-- 通話コントロールバー -->
-  <div id="call-bar">
-    <button class="call-btn on"  id="btn-mic" title="マイク">🎤</button>
-    <button class="call-btn on"  id="btn-cam" title="カメラ">📷</button>
-    <span id="call-label">通話中 0人</span>
-    <button class="call-btn off" id="btn-hangup" title="全切断">📵</button>
-  </div>
-
-  <!-- 映像ウィンドウ -->
-  <div id="video-dock">
-    <!-- 自分のプレビュー（常時表示） -->
-    <div class="video-tile" id="my-video-tile" style="display:none">
-      <video id="my-video" autoplay muted playsinline></video>
-      <div class="vtile-nick" id="my-video-nick">あなた</div>
+  <!-- ══ 通話招待モーダル（Zoom/Meet/LINE等のURL共有）═══════════ -->
+  <div id="call-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>📞 通話に招待する <button class="modal-close" id="call-modal-close">✕</button></h2>
+      <div style="font-size:.78rem;color:var(--text-dim)">
+        Zoom・Google Meet・LINE等のURLを近くの人（400px以内）全員に送ります
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px">サービスを選択</div>
+        <div class="sns-platform-grid" id="call-plt-grid"></div>
+      </div>
+      <div class="field-wrap">
+        <label id="call-url-label">会議URL</label>
+        <input id="call-url-inp" type="url" placeholder="https://zoom.us/j/..." autocomplete="off">
+      </div>
+      <div id="call-preview" style="display:none;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:.85rem;color:var(--text)">
+        📞 <span id="call-preview-text"></span>
+      </div>
+      <button class="btn-enter" id="call-invite-send" style="font-size:.95rem;padding:12px">
+        📨 招待を送る
+      </button>
     </div>
   </div>
+
+  <!-- ══ SNS名刺モーダル ══════════════════════════════════════════ -->
+  <div id="sns-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>📇 SNS名刺を渡す <button class="modal-close" id="sns-close">✕</button></h2>
+      <div style="font-size:.78rem;color:var(--text-dim)">
+        近くにいる人（400px以内）全員に届きます
+      </div>
+
+      <!-- プラットフォーム選択 -->
+      <div>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px">
+          SNSを選択
+        </div>
+        <div class="sns-platform-grid" id="sns-plt-grid"></div>
+      </div>
+
+      <!-- URL入力 -->
+      <div class="field-wrap">
+        <label id="sns-url-label">URL / ID</label>
+        <input id="sns-url-inp" type="url" placeholder="https://..." autocomplete="off">
+      </div>
+
+      <!-- プレビュー -->
+      <div id="sns-preview" style="display:none;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:.85rem;color:var(--text)">
+        📇 <span id="sns-preview-text"></span>
+      </div>
+
+      <button class="btn-enter" id="sns-send" style="font-size:.95rem;padding:12px">
+        📤 名刺を渡す
+      </button>
+    </div>
+  </div>
+
 
   <!-- ワープ演出ベール -->
   <div id="warp-veil"></div>
@@ -938,30 +954,6 @@ canvas#world { display: block; }
         style="font-size:.85rem;color:var(--text-dim);background:none;border:none;cursor:pointer;padding:4px">
         閉じる
       </button>
-    </div>
-  </div>
-
-  <!-- ══ 通話モーダル ══════════════════════════════════════════ -->
-  <div id="call-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h2>📞 通話する <button class="modal-close" id="call-modal-close">✕</button></h2>
-      <div style="font-size:.78rem;color:var(--text-dim)">
-        近くにいる人（500px以内）に発信できます
-      </div>
-      <div class="nearby-list" id="nearby-list"></div>
-    </div>
-  </div>
-  <div id="exit-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <div class="exit-icon">🚪</div>
-      <div class="exit-msg">
-        <span id="exit-nick-label"></span> さん、<br>
-        広場を退出しますか？
-      </div>
-      <div class="exit-btns">
-        <button id="exit-cancel">もどる</button>
-        <button id="exit-confirm">退出する</button>
-      </div>
     </div>
   </div>
 
@@ -1016,17 +1008,21 @@ canvas#world { display: block; }
 //  設定定数
 // ══════════════════════════════════════════════════════════════════
 const CFG = {
-  MOVE_SPD:      4,
-  DASH_SPD:      9,
+  MOVE_SPD:      8,       // 広大なマップ用に速度アップ
+  DASH_SPD:      20,
   PLAYER_R:      20,
   NICK_SHOW:     260,
   NICK_FULL:     160,
   VP_PAD:        200,
-  SEND_INTERVAL: 50,
+  SEND_INTERVAL: 100,     // サーバーtickに合わせて100ms
   BUBBLE_TTL:    5000,
-  TILE:          100,
-  // ▼ WebSocketサーバーURL（Railway デプロイ後のURLを設定）
-  WS_URL:  "wss://konnitiwa-minnna-server-production.up.railway.app",
+  TILE:          400,     // タイルサイズ拡大（広大マップ用）
+  // ▼ シャードURLリスト（複数シャードはここにURLを追加）
+  WS_SHARDS: [
+    "wss://konnitiwa-minnna-server-production.up.railway.app",
+    // "wss://konnitiwa-minnna-shard1.up.railway.app",
+    // "wss://konnitiwa-minnna-shard2.up.railway.app",
+  ],
   // ▼ GAS デプロイURL
   GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
@@ -1051,37 +1047,6 @@ let sessionStart = 0;
 
 // [P] パスコード
 let myPasscode = localStorage.getItem("konnitiwa_code") || "";
-
-// [R] WebRTC
-const peerConns   = new Map();   // peerId → RTCPeerConnection
-const peerStreams  = new Map();   // peerId → MediaStream
-const peerTiles   = new Map();   // peerId → video-tile DOM
-let   localStream = null;        // 自分のカメラ+マイク
-let   micEnabled  = true;
-let   camEnabled  = true;
-const CALL_RANGE  = 500;         // 通話開始距離 px（server.jsと合わせる）
-const TURN_URLS   = [];
-
-// ICE設定（STUN + Metered.ca TURN）
-const RTC_CONFIG = {
-  iceServers: [
-    // STUN
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    // TURN（Metered.ca virtual-office-kenken6291）
-    {
-      urls: [
-        "turn:global.relay.metered.ca:80",
-        "turn:global.relay.metered.ca:80?transport=tcp",
-        "turn:global.relay.metered.ca:443",
-        "turn:global.relay.metered.ca:443?transport=tcp",
-      ],
-      username:   "4fd77f32dd58e9321f5956af",
-      credential: "3ul1x9zBN/zboKMJ",
-    },
-  ],
-  iceCandidatePoolSize: 10,
-};
 
 // ── GAS HTTP ユーティリティ ─────────────────────────────────────
 const GAS_CONFIGURED = CFG.GAS_URL && !CFG.GAS_URL.includes("YOUR_DEPLOYMENT");
@@ -1218,7 +1183,7 @@ async function gasRegisterAndEnter(nick, avatar, restoreCode) {
   // GAS未設定なら即接続（ブロックしない）
   if (!GAS_CONFIGURED) {
     document.getElementById("btn-enter").disabled = false;
-    connect(CFG.WS_URL, restoreCode);
+    connect(CFG.WS_SHARDS[Math.floor(Math.random()*CFG.WS_SHARDS.length)], restoreCode);
     return;
   }
 
@@ -1248,7 +1213,7 @@ async function gasRegisterAndEnter(nick, avatar, restoreCode) {
   });
 
   document.getElementById("btn-enter").disabled = false;
-  connect(CFG.WS_URL, restoreCode);
+  connect(CFG.WS_SHARDS[Math.floor(Math.random()*CFG.WS_SHARDS.length)], restoreCode);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1289,7 +1254,10 @@ function _doConnect() {
   ws.onopen = () => {
     reconnectCount = 0;
     setBanner("接続完了 ✓", "ok");
-    ws.send(JSON.stringify({ type: "profile", nick: myNick, avatar: myAvatar }));
+    ws.send(JSON.stringify({
+      type: "profile", nick: myNick, avatar: myAvatar,
+      gasUserId,   // GASのuser_idをサーバーに伝える
+    }));
     if (wsRestoreCode && /^\d{8}$/.test(wsRestoreCode)) {
       ws.send(JSON.stringify({ type: "restore_passcode", code: wsRestoreCode }));
     }
@@ -1303,10 +1271,6 @@ function _doConnect() {
     }, 30000);
 
     // 再接続後：既存の通話を全リセットして近接チェックを再実行
-    if (reconnectCount > 0 || peerConns.size > 0) {
-      hangupAll();
-      setTimeout(() => checkCallRange(new Set()), 1000);
-    }
   };
 
   ws.onmessage = ev => {
@@ -1402,7 +1366,6 @@ function _doConnect() {
       others.forEach((_, id) => {
         if (!newIds.has(id)) others.delete(id);
       });
-      checkCallRange(prevIds);
     }
 
     if (m.type === "chat") {
@@ -1413,9 +1376,12 @@ function _doConnect() {
       spawnBubble(m.from, m.nick, m.avatar, m.text);
     }
 
-    if (m.type === "rtc_offer")  handleOffer(m);
-    if (m.type === "rtc_answer") handleAnswer(m);
-    if (m.type === "rtc_ice")    handleIce(m);
+    // SNS名刺受信
+    if (m.type === "sns_card") showSNSCard(m);
+
+    // 通話URL招待受信
+    if (m.type === "call_invite") showCallInvite(m);
+
   };
 
   ws.onclose = (ev) => {
@@ -2184,175 +2150,66 @@ document.getElementById("passcode-copy").addEventListener("click", () => {
 //  [R] WebRTC 近接通話
 // ══════════════════════════════════════════════════════════════════
 
-let gumPending = false;
+// ══════════════════════════════════════════════════════════════════
+//  通話招待機能（Zoom/Meet/LINE等のURL共有）
+// ══════════════════════════════════════════════════════════════════
 
-async function ensureLocalStream() {
-  if (localStream)  return localStream;
-  if (gumPending)   return null;
-  gumPending = true;
-  try {
-    showToast("📷 カメラ・マイクの許可をお願いします…");
-    localStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-      video: { width:320, height:240, facingMode:"user" },
+const CALL_PLATFORMS = [
+  { id: "zoom",   icon: "🎥", label: "Zoom",         placeholder: "https://zoom.us/j/..." },
+  { id: "meet",   icon: "📹", label: "Google Meet",  placeholder: "https://meet.google.com/..." },
+  { id: "teams",  icon: "💼", label: "Teams",        placeholder: "https://teams.microsoft.com/..." },
+  { id: "line",   icon: "💬", label: "LINE通話",     placeholder: "https://line.me/ti/p/..." },
+  { id: "facetime",icon:"📱", label: "FaceTime",     placeholder: "https://facetime.apple.com/..." },
+  { id: "other",  icon: "🔗", label: "その他URL",    placeholder: "https://..." },
+];
+
+let selectedCallPlt = CALL_PLATFORMS[0];
+
+function buildCallModal() {
+  const grid = document.getElementById("call-plt-grid");
+  grid.innerHTML = "";
+  CALL_PLATFORMS.forEach(plt => {
+    const btn = document.createElement("div");
+    btn.className = "sns-plt-btn" + (plt.id === selectedCallPlt.id ? " selected" : "");
+    btn.innerHTML = `<span class="s-icon">${plt.icon}</span><span>${plt.label}</span>`;
+    btn.addEventListener("click", () => {
+      selectedCallPlt = plt;
+      document.querySelectorAll("#call-plt-grid .sns-plt-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      document.getElementById("call-url-label").textContent = plt.label + " URL";
+      document.getElementById("call-url-inp").placeholder = plt.placeholder;
+      updateCallPreview();
     });
-    const myTile  = document.getElementById("my-video-tile");
-    const myVideo = document.getElementById("my-video");
-    document.getElementById("my-video-nick").textContent = myNick;
-    myVideo.srcObject = localStream;
-    myTile.style.display = "block";
-    localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
-    localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
-    showToast("✅ カメラ・マイク準備完了");
-  } catch (e) {
-    console.warn("getUserMedia失敗:", e);
-    showToast("⚠️ カメラ/マイクが使えません。ブラウザの許可を確認してください");
-    localStream = null;
-  } finally {
-    gumPending = false;
-    // ※ resetMove() をここで呼ぶのをやめる（移動を強制停止していた原因）
-  }
-  return localStream;
+    grid.appendChild(btn);
+  });
+  document.getElementById("call-url-label").textContent = selectedCallPlt.label + " URL";
+  document.getElementById("call-url-inp").placeholder   = selectedCallPlt.placeholder;
 }
 
-// ── 通話範囲チェック ────────────────────────────────────────────
-const callingPeers = new Set();
-
-function checkCallRange(prevIds) {
-  // 通話が切れた相手（範囲外）は自動切断
-  if (peerConns.size > 0) {
-    peerConns.forEach((pc, id) => {
-      const peer = others.get(id);
-      if (!peer || Math.hypot(peer.x - myX, peer.y - myY) > CALL_RANGE * 1.5) {
-        hangupPeer(id);
-      }
-    });
+function updateCallPreview() {
+  const url     = document.getElementById("call-url-inp").value.trim();
+  const preview = document.getElementById("call-preview");
+  const text    = document.getElementById("call-preview-text");
+  if (url.startsWith("https://")) {
+    preview.style.display = "block";
+    text.textContent = `${selectedCallPlt.icon} ${selectedCallPlt.label}：${url}`;
+  } else {
+    preview.style.display = "none";
   }
-  updateCallBar();
 }
 
-// ── 通話モーダル ─────────────────────────────────────────────────
+document.getElementById("call-url-inp")?.addEventListener("input", updateCallPreview);
+
 function openCallModal() {
   modalOpen = true;
   pressedKeys.clear();
   vpadKeys.clear();
-  buildNearbyList();
+  buildCallModal();
   document.getElementById("call-modal").classList.remove("hidden");
 }
 function closeCallModal() {
   document.getElementById("call-modal").classList.add("hidden");
   modalOpen = false;
-}
-
-function buildNearbyList() {
-  const list = document.getElementById("nearby-list");
-  list.innerHTML = "";
-
-  const nearby = [];
-  others.forEach((p, id) => {
-    const dist = Math.hypot(p.x - myX, p.y - myY);
-    if (dist <= CALL_RANGE) nearby.push({ ...p, dist });
-  });
-  nearby.sort((a, b) => a.dist - b.dist);
-
-  if (nearby.length === 0) {
-    list.innerHTML = `<div class="no-nearby">
-      近くに人がいません<br>
-      <span style="font-size:.72rem">500px以内に近づいてください</span>
-    </div>`;
-    return;
-  }
-
-  nearby.forEach(p => {
-    const isCalling  = peerConns.has(p.id);
-    const isCPending = callingPeers.has(p.id);
-    const item = document.createElement("div");
-    item.className = "nearby-item";
-    item.id = `nearby-${p.id}`;
-
-    const btnLabel = isCalling  ? "📵 切断"
-                   : isCPending ? "⏳ 発信中…"
-                   : "📞 発信";
-    const btnClass = isCalling || isCPending ? "calling" : "";
-
-    item.innerHTML = `
-      <div class="nearby-avatar">${p.avatar || "👤"}</div>
-      <div class="nearby-info">
-        <div class="nearby-nick">${p.nick || p.id}</div>
-        <div class="nearby-dist">距離 ${Math.floor(p.dist)}px</div>
-      </div>
-      <button class="nearby-call-btn ${btnClass}"
-              data-id="${p.id}" ${isCPending ? "disabled" : ""}>
-        ${btnLabel}
-      </button>
-    `;
-
-    const btn = item.querySelector(".nearby-call-btn");
-    btn.addEventListener("click", async () => {
-      if (peerConns.has(p.id)) {
-        // 通話中 → 切断
-        hangupPeer(p.id);
-        showToast(`📵 ${p.nick} さんとの通話を切断しました`);
-        buildNearbyList();   // ← モーダルを閉じずに再描画
-      } else if (!callingPeers.has(p.id)) {
-        // 未通話 → 発信（モーダルは閉じない）
-        callingPeers.add(p.id);
-        buildNearbyList();   // ← 「発信中…」に更新
-        try {
-          await callPeer(p.id);
-        } finally {
-          callingPeers.delete(p.id);
-          buildNearbyList(); // ← 発信完了後に再描画
-        }
-      }
-    });
-    list.appendChild(item);
-  });
-
-  // 全員に一括発信・全員切断ボタン
-  const connected = nearby.filter(p => peerConns.has(p.id));
-  const notConn   = nearby.filter(p => !peerConns.has(p.id) && !callingPeers.has(p.id));
-
-  if (nearby.length >= 2) {
-    const bar = document.createElement("div");
-    bar.style.cssText = "display:flex;gap:8px;margin-top:4px";
-
-    if (notConn.length >= 2) {
-      const allBtn = document.createElement("button");
-      allBtn.className = "btn-enter";
-      allBtn.style.cssText = "flex:1;font-size:.82rem;padding:10px";
-      allBtn.textContent = `📞 全員に発信（${notConn.length}人）`;
-      allBtn.addEventListener("click", async () => {
-        for (const p of notConn) {
-          if (!callingPeers.has(p.id) && !peerConns.has(p.id)) {
-            callingPeers.add(p.id);
-          }
-        }
-        buildNearbyList();
-        for (const p of notConn) {
-          try { await callPeer(p.id); }
-          catch {}
-          finally { callingPeers.delete(p.id); }
-        }
-        buildNearbyList();
-      });
-      bar.appendChild(allBtn);
-    }
-
-    if (connected.length >= 2) {
-      const hangBtn = document.createElement("button");
-      hangBtn.style.cssText = "flex:1;font-size:.82rem;padding:10px;background:rgba(220,80,80,0.2);border:1px solid #e86060;border-radius:8px;color:#f08080;cursor:pointer;font-family:var(--font)";
-      hangBtn.textContent = `📵 全員切断（${connected.length}人）`;
-      hangBtn.addEventListener("click", () => {
-        connected.forEach(p => hangupPeer(p.id));
-        showToast("📵 全員との通話を切断しました");
-        buildNearbyList();
-      });
-      bar.appendChild(hangBtn);
-    }
-
-    if (bar.children.length > 0) list.appendChild(bar);
-  }
 }
 
 document.getElementById("btn-call").addEventListener("click", openCallModal);
@@ -2361,190 +2218,184 @@ document.getElementById("call-modal").addEventListener("click", e => {
   if (e.target === document.getElementById("call-modal")) closeCallModal();
 });
 
-// ── Offerを送る（Callerサイド） ────────────────────────────────────
-async function callPeer(peerId) {
-  const stream = await ensureLocalStream();
-  if (!stream) return;
-
-  const peer = others.get(peerId);
-  const nick = peer ? peer.nick : peerId;
-  showToast(`📞 ${nick} さんと通話を開始します…`);
-
-  const pc = createPC(peerId);
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
-
-  const offer = await pc.createOffer();
-  await pc.setLocalDescription(offer);
-  wsSend({ type: "rtc_offer", to: peerId, sdp: pc.localDescription });
-}
-
-// ── Offerを受け取る（Calleeサイド） ───────────────────────────────
-async function handleOffer(m) {
-  if (peerConns.has(m.from)) return;
-  const stream = await ensureLocalStream();
-  if (!stream) return;
-
-  const pc = createPC(m.from);
-  stream.getTracks().forEach(t => pc.addTrack(t, stream));
-
-  await pc.setRemoteDescription(new RTCSessionDescription(m.sdp));
-  const answer = await pc.createAnswer();
-  await pc.setLocalDescription(answer);
-  wsSend({ type: "rtc_answer", to: m.from, sdp: pc.localDescription });
-}
-
-async function handleAnswer(m) {
-  const pc = peerConns.get(m.from);
-  if (!pc) return;
-  await pc.setRemoteDescription(new RTCSessionDescription(m.sdp));
-}
-
-async function handleIce(m) {
-  const pc = peerConns.get(m.from);
-  if (!pc || !m.candidate) return;
-  try { await pc.addIceCandidate(new RTCIceCandidate(m.candidate)); } catch {}
-}
-
-// ── RTCPeerConnection 作成（共通） ─────────────────────────────────
-function createPC(peerId) {
-  const pc = new RTCPeerConnection(RTC_CONFIG);
-  peerConns.set(peerId, pc);
-
-  // ICE候補をサーバー経由で相手に送る
-  pc.onicecandidate = ({ candidate }) => {
-    if (candidate) wsSend({ type: "rtc_ice", to: peerId, candidate });
-  };
-
-  // ICE収集完了ログ
-  pc.onicegatheringstatechange = () => {
-    console.log(`[ICE] gathering: ${pc.iceGatheringState} peer=${peerId}`);
-  };
-
-  // ICE接続状態ログ
-  pc.oniceconnectionstatechange = () => {
-    console.log(`[ICE] connection: ${pc.iceConnectionState} peer=${peerId}`);
-    if (pc.iceConnectionState === "failed") {
-      console.warn("[ICE] failed → restartIce");
-      try { pc.restartIce(); } catch {}
-    }
-  };
-
-  // 相手の映像・音声を受信
-  pc.ontrack = ({ streams }) => {
-    const stream = streams[0];
-    if (!stream) return;
-    peerStreams.set(peerId, stream);
-    addVideoTile(peerId, stream);
-    updateCallBar();
-    const peer = others.get(peerId);
-    showToast(`📹 ${peer ? peer.nick : peerId} さんの映像が届きました`);
-  };
-
-  pc.onconnectionstatechange = () => {
-    console.log(`[RTC] connection: ${pc.connectionState} peer=${peerId}`);
-    if (["disconnected","failed","closed"].includes(pc.connectionState)) {
-      hangupPeer(peerId);
-    }
-  };
-
-  return pc;
-}
-
-// ── 映像タイルを追加 ──────────────────────────────────────────────
-function addVideoTile(peerId, stream) {
-  if (peerTiles.has(peerId)) return;
-  const peer = others.get(peerId);
-  const nick = peer ? peer.nick : peerId;
-
-  const tile  = document.createElement("div");
-  tile.className = "video-tile";
-  tile.id = `vtile-${peerId}`;
-
-  const video = document.createElement("video");
-  video.autoplay = true; video.playsInline = true;
-  video.srcObject = stream;
-
-  const label = document.createElement("div");
-  label.className = "vtile-nick";
-  label.textContent = nick;
-
-  tile.appendChild(video);
-  tile.appendChild(label);
-  document.getElementById("video-dock").appendChild(tile);
-  peerTiles.set(peerId, tile);
-}
-
-// ── 1対1切断 ─────────────────────────────────────────────────────
-function hangupPeer(peerId) {
-  const pc = peerConns.get(peerId);
-  if (pc) { try { pc.close(); } catch {} peerConns.delete(peerId); }
-  peerStreams.delete(peerId);
-  const tile = peerTiles.get(peerId);
-  if (tile) { tile.remove(); peerTiles.delete(peerId); }
-  updateCallBar();
-}
-
-// ── 全切断 ────────────────────────────────────────────────────────
-function hangupAll() {
-  [...peerConns.keys()].forEach(hangupPeer);
-  if (localStream) {
-    localStream.getTracks().forEach(t => t.stop());
-    localStream = null;
+document.getElementById("call-invite-send").addEventListener("click", () => {
+  const url = clientSanitize(document.getElementById("call-url-inp").value.trim(), 300);
+  if (!url.startsWith("https://")) {
+    showToast("⚠️ https:// で始まるURLを入力してください");
+    return;
   }
-  document.getElementById("my-video-tile").style.display = "none";
-  document.getElementById("my-video").srcObject = null;
-  updateCallBar();
+  if (!ws || ws.readyState !== 1) { showToast("⚠️ 接続中ではありません"); return; }
+  ws.send(JSON.stringify({
+    type:  "call_invite",
+    label: `${selectedCallPlt.icon} ${selectedCallPlt.label}`,
+    url,
+  }));
+  closeCallModal();
+  showToast(`📨 ${selectedCallPlt.label} の招待を送りました！`);
+  // 自分もURLを開く
+  window.open(url, "_blank", "noopener,noreferrer");
+});
+
+// ── 通話招待受信 ───────────────────────────────────────────────────
+function showCallInvite(m) {
+  document.querySelectorAll(".call-invite-toast").forEach(el => el.remove());
+
+  const el = document.createElement("div");
+  el.className = "sns-toast call-invite-toast";
+  el.style.borderColor = "#4acf80";
+  el.innerHTML = `
+    <div>
+      <div class="st-from">${m.avatar || ""} ${clientSanitize(m.nick,16)} さんから通話招待が届きました</div>
+      <div class="st-label">${clientSanitize(m.label,20)}</div>
+      <div class="st-hint">タップして参加する</div>
+    </div>
+    <button class="st-open" style="background:linear-gradient(135deg,#4acf80,#2a9f60)">参加</button>
+  `;
+  el.querySelector(".st-open").addEventListener("click", e => {
+    e.stopPropagation();
+    window.open(m.url, "_blank", "noopener,noreferrer");
+    el.remove();
+  });
+  el.addEventListener("click", () => {
+    window.open(m.url, "_blank", "noopener,noreferrer");
+    el.remove();
+  });
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 30000);  // 30秒後に自動削除
+  showToast(`📞 ${m.nick} さんから通話招待が届きました！`);
 }
 
-// ── 通話バー更新 ──────────────────────────────────────────────────
-function updateCallBar() {
-  const bar   = document.getElementById("call-bar");
-  const count = peerStreams.size;   // 実際に映像/音声を受信中の数
-  if (count > 0 || localStream) {
-    bar.classList.add("active");
-    document.getElementById("call-label").textContent = `通話中 ${count}人`;
+const SNS_PLATFORMS = [
+  { id: "line",      icon: "💬", label: "LINE",      placeholder: "https://line.me/ti/p/...",       prefix: "https://line.me/" },
+  { id: "x",         icon: "𝕏",  label: "X(Twitter)", placeholder: "https://x.com/ユーザー名",       prefix: "https://x.com/" },
+  { id: "instagram", icon: "📸", label: "Instagram", placeholder: "https://instagram.com/ユーザー名", prefix: "https://instagram.com/" },
+  { id: "facebook",  icon: "👤", label: "Facebook",  placeholder: "https://facebook.com/...",        prefix: "https://facebook.com/" },
+  { id: "youtube",   icon: "▶️", label: "YouTube",   placeholder: "https://youtube.com/@...",        prefix: "https://youtube.com/" },
+  { id: "other",     icon: "🔗", label: "その他URL", placeholder: "https://...",                      prefix: "https://" },
+];
+
+let selectedSNS = SNS_PLATFORMS[0];
+
+// SNSモーダルを構築
+function buildSNSModal() {
+  const grid = document.getElementById("sns-plt-grid");
+  grid.innerHTML = "";
+  SNS_PLATFORMS.forEach(plt => {
+    const btn = document.createElement("div");
+    btn.className = "sns-plt-btn" + (plt.id === selectedSNS.id ? " selected" : "");
+    btn.innerHTML = `<span class="s-icon">${plt.icon}</span><span>${plt.label}</span>`;
+    btn.addEventListener("click", () => {
+      selectedSNS = plt;
+      document.querySelectorAll(".sns-plt-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      document.getElementById("sns-url-label").textContent = plt.label + " URL";
+      document.getElementById("sns-url-inp").placeholder = plt.placeholder;
+      updateSNSPreview();
+    });
+    grid.appendChild(btn);
+  });
+  document.getElementById("sns-url-label").textContent = selectedSNS.label + " URL";
+  document.getElementById("sns-url-inp").placeholder   = selectedSNS.placeholder;
+  updateSNSPreview();
+}
+
+function updateSNSPreview() {
+  const url     = document.getElementById("sns-url-inp").value.trim();
+  const preview = document.getElementById("sns-preview");
+  const text    = document.getElementById("sns-preview-text");
+  if (url.startsWith("https://")) {
+    preview.style.display = "block";
+    text.textContent = `${selectedSNS.icon} ${selectedSNS.label}：${url}`;
   } else {
-    bar.classList.remove("active");
+    preview.style.display = "none";
   }
 }
 
-// ── マイク ON/OFF ─────────────────────────────────────────────────
-document.getElementById("btn-mic").addEventListener("click", () => {
-  micEnabled = !micEnabled;
-  if (localStream) {
-    localStream.getAudioTracks().forEach(t => t.enabled = micEnabled);
-  }
-  const btn = document.getElementById("btn-mic");
-  btn.textContent = micEnabled ? "🎤" : "🔇";
-  btn.className   = `call-btn ${micEnabled ? "on" : "off"}`;
-  showToast(micEnabled ? "🎤 マイク ON" : "🔇 マイク OFF");
-});
+document.getElementById("sns-url-inp")?.addEventListener("input", updateSNSPreview);
 
-// ── カメラ ON/OFF ─────────────────────────────────────────────────
-document.getElementById("btn-cam").addEventListener("click", () => {
-  camEnabled = !camEnabled;
-  if (localStream) {
-    localStream.getVideoTracks().forEach(t => t.enabled = camEnabled);
-  }
-  const tile = document.getElementById("my-video-tile");
-  if (tile) tile.style.opacity = camEnabled ? "1" : "0.3";
-  const btn = document.getElementById("btn-cam");
-  btn.textContent = camEnabled ? "📷" : "🚫";
-  btn.className   = `call-btn ${camEnabled ? "on" : "off"}`;
-  showToast(camEnabled ? "📷 カメラ ON" : "🚫 カメラ OFF");
-});
-
-// ── 全切断ボタン ──────────────────────────────────────────────────
-document.getElementById("btn-hangup").addEventListener("click", hangupAll);
-
-// ── WS 送信ユーティリティ ─────────────────────────────────────────
-function wsSend(obj) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+// モーダル開閉
+function openSNSModal() {
+  modalOpen = true;
+  pressedKeys.clear();
+  vpadKeys.clear();
+  buildSNSModal();
+  document.getElementById("sns-modal").classList.remove("hidden");
+}
+function closeSNSModal() {
+  document.getElementById("sns-modal").classList.add("hidden");
+  modalOpen = false;
 }
 
-// ══════════════════════════════════════════════════════════════════
-//  トースト通知
-// ══════════════════════════════════════════════════════════════════
+document.getElementById("btn-sns").addEventListener("click", openSNSModal);
+document.getElementById("sns-close").addEventListener("click", closeSNSModal);
+document.getElementById("sns-modal").addEventListener("click", e => {
+  if (e.target === document.getElementById("sns-modal")) closeSNSModal();
+});
+
+// 送信
+document.getElementById("sns-send").addEventListener("click", () => {
+  const url = clientSanitize(document.getElementById("sns-url-inp").value.trim(), 200);
+  if (!url.startsWith("https://")) {
+    showToast("⚠️ https:// で始まるURLを入力してください");
+    return;
+  }
+  if (!ws || ws.readyState !== 1) {
+    showToast("⚠️ 接続中ではありません");
+    return;
+  }
+  ws.send(JSON.stringify({
+    type:  "sns_card",
+    label: `${selectedSNS.icon} ${selectedSNS.label}`,
+    url,
+  }));
+  closeSNSModal();
+  showToast(`📤 ${selectedSNS.label} の名刺を渡しました！`);
+  // GAS記録
+  gasPost({
+    action: "chat_log", user_id: gasUserId,
+    nick: myNick, avatar: myAvatar,
+    message: `[SNS名刺] ${selectedSNS.label}`,
+    x: Math.floor(myX), y: Math.floor(myY),
+    area: getAreaName(myX, myY),
+  });
+});
+
+// ── SNS名刺受信 ───────────────────────────────────────────────────
+function showSNSCard(m) {
+  // 既存のSNSトーストを削除
+  document.querySelectorAll(".sns-toast").forEach(el => el.remove());
+
+  const el = document.createElement("div");
+  el.className = "sns-toast";
+  el.innerHTML = `
+    <div>
+      <div class="st-from">${m.avatar} ${clientSanitize(m.nick,16)} さんから名刺が届きました</div>
+      <div class="st-label">${clientSanitize(m.label,20)}</div>
+      <div class="st-hint">タップして開く</div>
+    </div>
+    <button class="st-open">開く</button>
+  `;
+
+  // 「開く」ボタン
+  el.querySelector(".st-open").addEventListener("click", e => {
+    e.stopPropagation();
+    window.open(m.url, "_blank", "noopener,noreferrer");
+    el.remove();
+  });
+
+  // カード全体タップでも開く
+  el.addEventListener("click", () => {
+    window.open(m.url, "_blank", "noopener,noreferrer");
+    el.remove();
+  });
+
+  document.body.appendChild(el);
+
+  // 15秒後に自動削除
+  setTimeout(() => el.remove(), 15000);
+
+  showToast(`📇 ${m.nick} さんから名刺が届きました！`);
+}
 let toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById("toast");
@@ -2571,9 +2422,6 @@ function closeExitModal() {
 
 function doExit() {
   closeExitModal();
-
-  // [R] 通話全切断
-  hangupAll();
 
   // GAS：退室ログ
   const sessionMin = sessionStart
@@ -2751,7 +2599,7 @@ const WARP_SPOTS = [
     icon:  "🏮",
     desc:  "街の中心。みんなが集まる賑やかな広場",
     tag:   "中央エリア",
-    x:     5000, y: 2000,
+    x:     1_581_000, y: 1_581_000,
     color: "rgba(232,146,74,0.6)",
   },
   {
@@ -2759,7 +2607,7 @@ const WARP_SPOTS = [
     icon:  "🍵",
     desc:  "静かな茶室。ゆっくり話せる落ち着いた場所",
     tag:   "北西エリア",
-    x:     1500, y: 1200,
+    x:       400_000, y:   400_000,
     color: "rgba(74,180,100,0.6)",
   },
   {
@@ -2767,7 +2615,7 @@ const WARP_SPOTS = [
     icon:  "🪑",
     desc:  "川沿いの縁側。景色を眺めながらのんびり",
     tag:   "東エリア",
-    x:     8200, y: 3600,
+    x:     2_700_000, y: 1_200_000,
     color: "rgba(74,150,230,0.6)",
   },
   {
@@ -2775,7 +2623,7 @@ const WARP_SPOTS = [
     icon:  "🌸",
     desc:  "大きな川のほとり。春は桜が美しい",
     tag:   "南エリア",
-    x:     4200, y: 6500,
+    x:     1_400_000, y: 2_700_000,
     color: "rgba(230,100,180,0.6)",
   },
   {
@@ -2783,7 +2631,7 @@ const WARP_SPOTS = [
     icon:  "🏯",
     desc:  "古い石畳が続く横丁。昭和の雰囲気",
     tag:   "北東エリア",
-    x:     7800, y: 1000,
+    x:     2_500_000, y:   300_000,
     color: "rgba(180,140,80,0.6)",
   },
 ];
