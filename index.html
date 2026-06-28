@@ -292,7 +292,7 @@ canvas#world { display: block; }
 #radar-E { right: 12px; top: 50%; transform: translateY(-50%); }
 
 /* ── チャット吹き出し群（Canvas外DOM） ── */
-#bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
+#bubbles { position: fixed; inset: 0; pointer-events: none; z-index: 150; }
 .bubble {
   position: absolute;
   background: var(--panel);
@@ -1746,8 +1746,10 @@ function spawnBubble(id, nick, avatar, text) {
   const el = document.createElement("div");
   el.className = "bubble";
   el.textContent = `${avatar} ${clientSanitize(nick,16)}: ${clientSanitize(text,60)}`;
+  // 最初のフレームで左上に見えないよう画面外に置く
+  el.style.left = "-9999px";
+  el.style.top  = "-9999px";
   document.getElementById("bubbles").appendChild(el);
-  // wx/wyは保存しない。毎フレームidから解決する
   bubbles.push({ el, id, born: performance.now() });
 }
 
@@ -2021,6 +2023,68 @@ function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
 
     ctx.restore();
   }
+
+  // ── 吹き出し（Canvas上に描画） ──────────────────────────────────
+  const now2 = performance.now();
+  bubbles.forEach(b => {
+    const age = now2 - b.born;
+    if (age > CFG.BUBBLE_TTL) return;
+
+    // 送信者の座標取得
+    let wx, wy;
+    if (b.id === myId) { wx = myX; wy = myY; }
+    else {
+      const peer = others.get(b.id);
+      if (!peer) return;
+      wx = peer.x; wy = peer.y;
+    }
+
+    // スクリーン座標
+    const sx = Math.round(wx - camX);
+    const sy = Math.round(wy - camY);
+
+    // フェードアウト
+    const fadeStart = CFG.BUBBLE_TTL * 0.7;
+    const alpha = age > fadeStart
+      ? 1 - (age - fadeStart) / (CFG.BUBBLE_TTL - fadeStart) : 1;
+
+    // 吹き出し描画
+    const text  = b.el.textContent;
+    const fsize = 13;
+    ctx.save();
+    ctx.font = `${fsize}px sans-serif`;
+    ctx.globalAlpha = alpha;
+
+    const PAD = 10;
+    const tw  = ctx.measureText(text).width;
+    const bw  = tw + PAD * 2;
+    const bh  = fsize + PAD * 2;
+
+    // キャラクターの真上に配置
+    let bx = sx - bw / 2;
+    let by = sy - CFG.PLAYER_R - bh - 32;
+
+    // 画面端クランプ
+    bx = Math.max(4, Math.min(vw - bw - 4, bx));
+    if (by < 60) by = sy + CFG.PLAYER_R + 10;
+
+    // 背景
+    ctx.fillStyle = "rgba(14,18,24,0.92)";
+    ctx.strokeStyle = "rgba(240,200,74,0.8)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    // テキスト
+    ctx.fillStyle = "#f4efe6";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    ctx.fillText(text, bx + PAD, by + bh / 2);
+
+    ctx.restore();
+  });
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -2103,51 +2167,13 @@ function updateRadar(vw, vh) {
 //  チャット吹き出し更新
 // ══════════════════════════════════════════════════════════════════
 function updateBubbles(vw, vh, now) {
+  // 期限切れの吹き出しを削除（描画はdraw()内のCanvas描画で行う）
   for (let i = bubbles.length - 1; i >= 0; i--) {
     const b = bubbles[i];
-    const age = now - b.born;
-    if (age > CFG.BUBBLE_TTL) {
+    if (now - b.born > CFG.BUBBLE_TTL) {
       b.el.remove();
       bubbles.splice(i, 1);
-      continue;
     }
-
-    // フェードアウト
-    const fadeStart = CFG.BUBBLE_TTL * 0.7;
-    const alpha = age > fadeStart
-      ? 1 - (age - fadeStart) / (CFG.BUBBLE_TTL - fadeStart) : 1;
-    b.el.style.opacity = alpha.toFixed(2);
-
-    // 送信者のワールド座標を取得
-    let wx, wy;
-    if (b.id === myId) {
-      wx = myX; wy = myY;
-    } else {
-      const peer = others.get(b.id);
-      if (peer) { wx = peer.x; wy = peer.y; }
-      else { b.el.style.opacity = "0"; continue; }
-    }
-
-    // ワールド座標 → スクリーン座標（キャラクター中心）
-    const sx = Math.round(wx - camX);
-    const sy = Math.round(wy - camY);
-
-    // 吹き出しサイズ
-    const bw = b.el.offsetWidth  || 220;
-    const bh = b.el.offsetHeight || 44;
-
-    // X: キャラクター中央揃え・画面端から8px以上
-    let bx = sx - Math.round(bw / 2);
-    bx = Math.max(8, Math.min(vw - bw - 8, bx));
-
-    // Y: キャラクターの真上（アバター半径+ニック名の高さ分上）
-    let by = sy - CFG.PLAYER_R - bh - 28;
-
-    // 上がHUDボタンに隠れるならキャラクターの下に出す
-    if (by < 58) by = sy + CFG.PLAYER_R + 8;
-
-    b.el.style.left = bx + "px";
-    b.el.style.top  = by + "px";
   }
 }
 
