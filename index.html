@@ -1008,22 +1008,18 @@ canvas#world { display: block; }
 //  設定定数
 // ══════════════════════════════════════════════════════════════════
 const CFG = {
-  MOVE_SPD:      8,       // 広大なマップ用に速度アップ
-  DASH_SPD:      20,
+  MOVE_SPD:      4,
+  DASH_SPD:      9,
   PLAYER_R:      20,
   NICK_SHOW:     260,
   NICK_FULL:     160,
   VP_PAD:        200,
-  SEND_INTERVAL: 100,     // サーバーtickに合わせて100ms
+  SEND_INTERVAL: 50,
   BUBBLE_TTL:    5000,
-  TILE:          400,     // タイルサイズ拡大（広大マップ用）
-  // ▼ シャードURLリスト（複数シャードはここにURLを追加）
+  TILE:          100,
   WS_SHARDS: [
     "wss://konnitiwa-minnna-server-production.up.railway.app",
-    // "wss://konnitiwa-minnna-shard1.up.railway.app",
-    // "wss://konnitiwa-minnna-shard2.up.railway.app",
   ],
-  // ▼ GAS デプロイURL
   GAS_URL: "https://script.google.com/macros/s/AKfycbwBpMr2fdkbUzGbqfiVuUrRHqiTg0r1gJVK4B2PwJh5lqcWsHLBWrAu11rgHWR9erk/exec",
 };
 
@@ -2599,7 +2595,7 @@ const WARP_SPOTS = [
     icon:  "🏮",
     desc:  "街の中心。みんなが集まる賑やかな広場",
     tag:   "中央エリア",
-    x:     1_581_000, y: 1_581_000,
+    x:     5000, y: 2000,
     color: "rgba(232,146,74,0.6)",
   },
   {
@@ -2607,7 +2603,7 @@ const WARP_SPOTS = [
     icon:  "🍵",
     desc:  "静かな茶室。ゆっくり話せる落ち着いた場所",
     tag:   "北西エリア",
-    x:       400_000, y:   400_000,
+    x:     1500, y: 1200,
     color: "rgba(74,180,100,0.6)",
   },
   {
@@ -2615,7 +2611,7 @@ const WARP_SPOTS = [
     icon:  "🪑",
     desc:  "川沿いの縁側。景色を眺めながらのんびり",
     tag:   "東エリア",
-    x:     2_700_000, y: 1_200_000,
+    x:     8200, y: 3600,
     color: "rgba(74,150,230,0.6)",
   },
   {
@@ -2623,7 +2619,7 @@ const WARP_SPOTS = [
     icon:  "🌸",
     desc:  "大きな川のほとり。春は桜が美しい",
     tag:   "南エリア",
-    x:     1_400_000, y: 2_700_000,
+    x:     4200, y: 6500,
     color: "rgba(230,100,180,0.6)",
   },
   {
@@ -2631,7 +2627,7 @@ const WARP_SPOTS = [
     icon:  "🏯",
     desc:  "古い石畳が続く横丁。昭和の雰囲気",
     tag:   "北東エリア",
-    x:     2_500_000, y:   300_000,
+    x:     7800, y: 1000,
     color: "rgba(180,140,80,0.6)",
   },
 ];
