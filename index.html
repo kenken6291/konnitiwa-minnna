@@ -1718,7 +1718,9 @@ function spawnBubble(id, nick, avatar, text) {
 // ══════════════════════════════════════════════════════════════════
 //  メインループ
 // ══════════════════════════════════════════════════════════════════
-let lastSend = 0;
+let lastSend  = 0;
+let lastSentX = -1;  // 最後に送信した座標
+let lastSentY = -1;
 
 function loop(now) {
   requestAnimationFrame(loop);
@@ -1732,10 +1734,13 @@ function loop(now) {
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
   }
 
-  // ── 送信 ────────────────────────────────────────────────────
-  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL) {
+  // ── 送信（座標が変化した時だけ送信）────────────────────────
+  const moved = myX !== lastSentX || myY !== lastSentY;
+  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL && moved) {
     ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
-    lastSend = now;
+    lastSend  = now;
+    lastSentX = myX;
+    lastSentY = myY;
   }
 
   // ── カメラ ──────────────────────────────────────────────────
@@ -1838,26 +1843,28 @@ function draw(vw, vh, now) {
 }
 
 // アバター1体を描画
-// profile: { title, hobbies } — 省略可
 function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
   const r = CFG.PLAYER_R * (isSelf ? 1.15 : 1);
 
-  // 影光彩
   ctx.save();
+
+  // 影光彩 + 円背景
   ctx.shadowColor = isSelf ? "rgba(232,146,74,0.8)" : "rgba(74,150,230,0.5)";
   ctx.shadowBlur  = isSelf ? 18 : 10;
-
-  // 円背景
-  ctx.fillStyle = isSelf ? "rgba(232,146,74,0.25)" : "rgba(44,74,124,0.35)";
+  ctx.fillStyle   = isSelf ? "rgba(232,146,74,0.25)" : "rgba(44,74,124,0.35)";
   ctx.beginPath();
   ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
+
+  // shadowをリセット（絵文字・テキストに影がかからないように）
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur  = 0;
 
   // 絵文字アバター
   ctx.font = `${r * 1.5}px serif`;
-  ctx.textAlign = "center";
+  ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
+  ctx.fillStyle    = "#fff";
   ctx.fillText(emoji, sx, sy);
 
   // 自分の枠（提灯オレンジ）
@@ -1868,6 +1875,8 @@ function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
     ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
     ctx.stroke();
   }
+
+  ctx.restore();
 
   // ── 名札描画（2段：称号＋ニック / 趣味タグ） ──────────────
   if (nickAlpha > 0.02) {
