@@ -1527,11 +1527,10 @@ const pressedKeys = new Set();
 const vpadKeys    = new Set();
 let   dashOn      = false;
 
-// フォーム要素フォーカス中は移動しない
+// テキスト入力中のみ移動をブロック（ボタンは除外）
 function isMovementBlocked() {
   const tag = document.activeElement?.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA"
-      || tag === "BUTTON" || tag === "SELECT";
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
 // モーダルが開いているかフラグ（この間はresetMoveを呼ばない）
@@ -1561,7 +1560,6 @@ window.addEventListener("keydown", e => {
   if (e.key === "Shift")  { dashOn = true; return; }
   if (e.key === "Enter")  {
     e.preventDefault();
-    resetMove();
     document.getElementById("chat-input")?.focus();
     return;
   }
@@ -1575,13 +1573,14 @@ window.addEventListener("keyup", e => {
   pressedKeys.delete(e.key);
 });
 
-// ── フォーカス離脱・タブ切替で全クリア ──────────────────────────
-window.addEventListener("blur", () => {
-  if (!modalOpen) resetMove();
+// ── タブ非表示・ウィンドウ非アクティブで全クリア ─────────────────
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) resetMove();
 });
-document.addEventListener("visibilitychange", resetMove);
-document.addEventListener("focusin", () => {
-  if (!modalOpen && isMovementBlocked()) resetMove();
+// チャット入力欄にフォーカスが入った時だけリセット
+document.addEventListener("focusin", e => {
+  const tag = e.target?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA") resetMove();
 });
 
 // ── バーチャルパッド ─────────────────────────────────────────────
@@ -1614,7 +1613,6 @@ function sendChat() {
   const inp  = document.getElementById("chat-input");
   const text = clientSanitize(inp.value, 60);
   inp.value = "";
-  resetMove();
   inp.blur();
   if (!text || !ws || ws.readyState !== 1) return;
   ws.send(JSON.stringify({ type: "chat", text }));
@@ -2089,7 +2087,6 @@ function updateHUD() {
 // ══════════════════════════════════════════════════════════════════
 function openPasscodeModal() {
   modalOpen = true;
-  resetMove();
   document.getElementById("passcode-disp").textContent =
     myPasscode || "--------";
   document.getElementById("passcode-modal").classList.remove("hidden");
@@ -2097,7 +2094,6 @@ function openPasscodeModal() {
 function closePasscodeModal() {
   document.getElementById("passcode-modal").classList.add("hidden");
   modalOpen = false;
-  resetMove();
 }
 document.getElementById("btn-show-code").addEventListener("click", openPasscodeModal);
 document.getElementById("passcode-close").addEventListener("click", closePasscodeModal);
@@ -2173,14 +2169,12 @@ function checkCallRange(prevIds) {
 // ── 通話モーダル ─────────────────────────────────────────────────
 function openCallModal() {
   modalOpen = true;
-  resetMove();   // 開く前にキーをクリア
   buildNearbyList();
   document.getElementById("call-modal").classList.remove("hidden");
 }
 function closeCallModal() {
   document.getElementById("call-modal").classList.add("hidden");
   modalOpen = false;
-  resetMove();   // 閉じた後もクリア
 }
 
 function buildNearbyList() {
@@ -2498,14 +2492,12 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════════════
 function openExitModal() {
   modalOpen = true;
-  resetMove();
   document.getElementById("exit-nick-label").textContent = myNick || "あなた";
   document.getElementById("exit-modal").classList.remove("hidden");
 }
 function closeExitModal() {
   document.getElementById("exit-modal").classList.add("hidden");
   modalOpen = false;
-  resetMove();
 }
 
 function doExit() {
@@ -2642,14 +2634,12 @@ function updateBadgeNote() {
 
 function openBadgeModal() {
   modalOpen = true;
-  resetMove();
   buildBadgeModal();
   document.getElementById("badge-modal").classList.remove("hidden");
 }
 function closeBadgeModal() {
   document.getElementById("badge-modal").classList.add("hidden");
   modalOpen = false;
-  resetMove();
 }
 
 document.getElementById("btn-badge").addEventListener("click", openBadgeModal);
@@ -2752,14 +2742,12 @@ function buildWarpList() {
 
 function openWarpModal() {
   modalOpen = true;
-  resetMove();
   buildWarpList();
   document.getElementById("warp-modal").classList.remove("hidden");
 }
 function closeWarpModal() {
   document.getElementById("warp-modal").classList.add("hidden");
   modalOpen = false;
-  resetMove();
 }
 
 document.getElementById("btn-warp").addEventListener("click", openWarpModal);
