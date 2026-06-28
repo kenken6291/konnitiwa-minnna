@@ -2139,6 +2139,8 @@ function openPasscodeModal() {
 function closePasscodeModal() {
   document.getElementById("passcode-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 document.getElementById("btn-show-code").addEventListener("click", openPasscodeModal);
 document.getElementById("passcode-close").addEventListener("click", closePasscodeModal);
@@ -2224,6 +2226,8 @@ function openCallModal() {
 function closeCallModal() {
   document.getElementById("call-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 
 document.getElementById("btn-call").addEventListener("click", openCallModal);
@@ -2338,6 +2342,8 @@ function openSNSModal() {
 function closeSNSModal() {
   document.getElementById("sns-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 
 document.getElementById("btn-sns").addEventListener("click", openSNSModal);
@@ -2432,6 +2438,8 @@ function openExitModal() {
 function closeExitModal() {
   document.getElementById("exit-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 
 function doExit() {
@@ -2573,6 +2581,8 @@ function openBadgeModal() {
 function closeBadgeModal() {
   document.getElementById("badge-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 
 document.getElementById("btn-badge").addEventListener("click", openBadgeModal);
@@ -2683,6 +2693,8 @@ function openWarpModal() {
 function closeWarpModal() {
   document.getElementById("warp-modal").classList.add("hidden");
   modalOpen = false;
+  pressedKeys.clear();
+  vpadKeys.clear();
 }
 
 document.getElementById("btn-warp").addEventListener("click", openWarpModal);
