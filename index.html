@@ -1035,6 +1035,23 @@ canvas#world { display: block; }
     </div>
   </div>
 
+</div><!-- #game -->
+
+  <!-- ══ 退出確認モーダル ════════════════════════════════════════ -->
+  <div id="exit-modal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width:340px;text-align:center;gap:16px">
+      <div style="font-size:2.8rem">🚪</div>
+      <div style="font-size:.9rem;color:var(--text);line-height:1.7">
+        <span id="exit-nick-label" style="color:var(--chochin2);font-weight:700"></span> さん、<br>
+        広場を退出しますか？
+      </div>
+      <div style="display:flex;gap:10px">
+        <button id="exit-cancel" style="flex:1;padding:12px;border-radius:var(--radius);font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;border:1px solid var(--border);background:rgba(255,255,255,0.06);color:var(--text)">もどる</button>
+        <button id="exit-confirm" style="flex:1;padding:12px;border-radius:var(--radius);font-family:var(--font);font-size:.9rem;font-weight:700;cursor:pointer;border:none;background:linear-gradient(135deg,#c03030,#e05050);color:#fff">退出する</button>
+      </div>
+    </div>
+  </div>
+
 <!-- ══════════════════════════════════════════════════════════════
      JavaScript
 ══════════════════════════════════════════════════════════════════ -->
