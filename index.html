@@ -2589,7 +2589,14 @@ function closeBadgeModal() {
   vpadKeys.clear();
 }
 
-document.getElementById("btn-badge").addEventListener("click", openBadgeModal);
+document.getElementById("btn-badge").addEventListener("click", () => {
+  try {
+    openBadgeModal();
+  } catch(e) {
+    showToast("❌ エラー: " + e.message);
+    console.error("openBadgeModal error:", e);
+  }
+});
 document.getElementById("badge-close").addEventListener("click", closeBadgeModal);
 document.getElementById("badge-modal").addEventListener("click", e => {
   if (e.target === document.getElementById("badge-modal")) closeBadgeModal();
