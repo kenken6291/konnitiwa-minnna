@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>こんにちは、みんな</title>
 <style>
 /* ══════════════════════════════════════════════════════════════════
@@ -2108,14 +2111,14 @@ function updateBubbles(vw, vh, now) {
       bubbles.splice(i, 1);
       continue;
     }
+
     // フェードアウト
     const fadeStart = CFG.BUBBLE_TTL * 0.7;
     const alpha = age > fadeStart
-      ? 1 - (age - fadeStart) / (CFG.BUBBLE_TTL - fadeStart)
-      : 1;
+      ? 1 - (age - fadeStart) / (CFG.BUBBLE_TTL - fadeStart) : 1;
     b.el.style.opacity = alpha.toFixed(2);
 
-    // idから毎フレーム座標を解決
+    // 送信者のワールド座標を取得
     let wx, wy;
     if (b.id === myId) {
       wx = myX; wy = myY;
@@ -2125,27 +2128,23 @@ function updateBubbles(vw, vh, now) {
       else { b.el.style.opacity = "0"; continue; }
     }
 
-    // キャラクターのスクリーン座標
-    const sx = wx - camX;
-    const sy = wy - camY;
+    // ワールド座標 → スクリーン座標（キャラクター中心）
+    const sx = Math.round(wx - camX);
+    const sy = Math.round(wy - camY);
 
-    // 吹き出しサイズ取得
-    const bw = b.el.offsetWidth  || 200;
-    const bh = b.el.offsetHeight || 40;
+    // 吹き出しサイズ
+    const bw = b.el.offsetWidth  || 220;
+    const bh = b.el.offsetHeight || 44;
 
-    // 左右：キャラクター中央揃え・画面端クランプ
-    const margin = 8;
-    let bx = sx - bw / 2;
-    bx = Math.max(margin, Math.min(vw - bw - margin, bx));
+    // X: キャラクター中央揃え・画面端から8px以上
+    let bx = sx - Math.round(bw / 2);
+    bx = Math.max(8, Math.min(vw - bw - 8, bx));
 
-    // 上下：キャラクターの真上に出す
-    // 上が隠れる（HUDより上）場合はキャラクターの下に出す
-    const HUD_BOTTOM = 56; // HUDボタンの下端
-    let by = sy - CFG.PLAYER_R - bh - 8;
-    if (by < HUD_BOTTOM) {
-      // キャラクターの下に出す
-      by = sy + CFG.PLAYER_R + 8;
-    }
+    // Y: キャラクターの真上（アバター半径+ニック名の高さ分上）
+    let by = sy - CFG.PLAYER_R - bh - 28;
+
+    // 上がHUDボタンに隠れるならキャラクターの下に出す
+    if (by < 58) by = sy + CFG.PLAYER_R + 8;
 
     b.el.style.left = bx + "px";
     b.el.style.top  = by + "px";
