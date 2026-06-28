@@ -2133,15 +2133,19 @@ function updateBubbles(vw, vh, now) {
     const bw = b.el.offsetWidth  || 200;
     const bh = b.el.offsetHeight || 40;
 
-    // キャラクター中央揃え・キャラクターの真上に配置
-    const margin   = 8;
-    const hudH     = 60;  // HUDボタンの高さ分（上端余白）
+    // 左右：キャラクター中央揃え・画面端クランプ
+    const margin = 8;
     let bx = sx - bw / 2;
-    let by = sy - CFG.PLAYER_R - bh - 12;  // キャラ上端から12px上
-
-    // 画面端クランプ
     bx = Math.max(margin, Math.min(vw - bw - margin, bx));
-    by = Math.max(hudH, by);  // HUDボタンより下に
+
+    // 上下：キャラクターの真上に出す
+    // 上が隠れる（HUDより上）場合はキャラクターの下に出す
+    const HUD_BOTTOM = 56; // HUDボタンの下端
+    let by = sy - CFG.PLAYER_R - bh - 8;
+    if (by < HUD_BOTTOM) {
+      // キャラクターの下に出す
+      by = sy + CFG.PLAYER_R + 8;
+    }
 
     b.el.style.left = bx + "px";
     b.el.style.top  = by + "px";
