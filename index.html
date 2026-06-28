@@ -1719,7 +1719,7 @@ function spawnBubble(id, nick, avatar, text) {
 //  メインループ
 // ══════════════════════════════════════════════════════════════════
 let lastSend  = 0;
-let lastSentX = -1;  // 最後に送信した座標
+let lastSentX = -1;
 let lastSentY = -1;
 
 function loop(now) {
@@ -1734,13 +1734,18 @@ function loop(now) {
     myY = Math.max(0, Math.min(worldH, myY + dy * spd));
   }
 
+  // 座標は整数に丸める（浮動小数点の誤差で送信し続けるのを防ぐ）
+  myX = Math.round(myX);
+  myY = Math.round(myY);
+
   // ── 送信（座標が変化した時だけ送信）────────────────────────
-  const moved = myX !== lastSentX || myY !== lastSentY;
-  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL && moved) {
-    ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
-    lastSend  = now;
-    lastSentX = myX;
-    lastSentY = myY;
+  if (ws && ws.readyState === 1 && now - lastSend > CFG.SEND_INTERVAL) {
+    if (myX !== lastSentX || myY !== lastSentY) {
+      ws.send(JSON.stringify({ type: "move", x: myX, y: myY }));
+      lastSend  = now;
+      lastSentX = myX;
+      lastSentY = myY;
+    }
   }
 
   // ── カメラ ──────────────────────────────────────────────────
