@@ -46,6 +46,64 @@ body {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   免責事項モーダル
+══════════════════════════════════════════════════════════════════ */
+#disclaimer-modal {
+  position: fixed; inset: 0; z-index: 9998;
+  background: rgba(0,0,0,0.92);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+#disclaimer-modal.hidden { display: none; }
+.disc-card {
+  background: var(--panel);
+  border: 1px solid var(--chochin);
+  border-radius: var(--radius);
+  padding: 24px 20px;
+  max-width: 560px; width: 100%;
+  max-height: 90vh;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.disc-card h2 {
+  font-size: 1rem; color: var(--chochin2);
+  text-align: center; margin: 0; letter-spacing: .08em;
+}
+#disclaimer-body {
+  overflow-y: auto;
+  font-size: .76rem; color: var(--text-dim);
+  line-height: 1.9;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: rgba(0,0,0,0.25);
+  max-height: 50vh;
+}
+#disclaimer-body strong { color: var(--text); }
+#disclaimer-body ol { padding-left: 18px; margin: 8px 0; }
+#disclaimer-body ul { padding-left: 18px; margin: 4px 0; }
+#disclaimer-body li { margin-bottom: 5px; }
+.disc-check-row {
+  display: flex; align-items: center; gap: 10px;
+  font-size: .85rem; color: var(--text);
+  cursor: pointer; user-select: none;
+}
+.disc-check-row input[type="checkbox"] {
+  width: 20px; height: 20px;
+  accent-color: var(--chochin2);
+  cursor: pointer; flex-shrink: 0;
+}
+#disc-agree-btn {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--chochin), var(--chochin2));
+  color: var(--ink);
+  font-family: var(--font); font-size: .95rem; font-weight: 900;
+  border: none; border-radius: var(--radius);
+  cursor: pointer; transition: opacity .2s;
+}
+#disc-agree-btn:disabled { opacity: .35; cursor: not-allowed; }
+#disc-agree-btn:not(:disabled):hover { opacity: .85; }
+
+/* ══════════════════════════════════════════════════════════════════
    ログイン画面
 ══════════════════════════════════════════════════════════════════ */
 #login {
@@ -787,6 +845,54 @@ canvas#world { display: block; }
 </head>
 <body>
 
+<!-- ══ 免責事項モーダル（初回のみ表示）══════════════════════════ -->
+<div id="disclaimer-modal">
+  <div class="disc-card">
+    <h2>◻️ 免責事項および注意事項 ◻️</h2>
+    <div id="disclaimer-body">
+      <p>本サービス（以下「当サービス」といいます）は、有志のボランティアにより運営され、会員の皆様に無料で提供されているものです。ご利用いただくにあたり、会員の皆様に安心・安全にご利用いただくための注意事項および免責事項を定めています。会員登録を完了された時点で、本内容に同意したものとみなされます。</p>
+      <ol>
+        <li>
+          <strong>無料提供およびボランティア運営に伴う原則</strong><br>
+          当サービスはボランティアによる善意で運営されており、会員に対して何らの対価を求めるものではありません。運営側は、当サービスの永続的な提供、運営サポート、システムの完全性（エラーやバグの不発生）、および特定の目的への適合性について、いかなる保証も行いません。
+        </li>
+        <li>
+          <strong>自己責任の原則</strong><br>
+          会員は、当サービスが無料のボランティア運営であることを十分理解した上で、自己の責任において当サービスを利用するものとします。当サービスを通じて提供される情報、他の会員とのやり取り、およびそれに付随する一切の行為については、会員ご自身でその正確性や安全性を判断してください。
+        </li>
+        <li>
+          <strong>当事者間での問題解決</strong><br>
+          当サービスをきっかけとして生じた会員間、または会員と第三者との間のトラブル、紛争、損害（金銭的トラブル、誹謗中傷、出会いに関するトラブル等を含みますがこれらに限りません）については、すべて当事者間で解決するものとします。
+        </li>
+        <li>
+          <strong>運営側の不関与（免責事項）</strong><br>
+          運営側は、会員間のトラブルおよび会員が被った損害について、理由の如何を問わず一切の責任を負いません。また、トラブルに対する仲裁、調停、相談対応、交渉等を行う義務も負わないものとします。ボランティア運営の特性上、事前の予告なくサービスの変更、一時停止、または終了することがあります。これによって生じた損害についても、運営側は一切の責任を負いません。
+        </li>
+        <li>
+          <strong>禁止事項（公序良俗の遵守）</strong><br>
+          会員は、当サービスの利用にあたり、以下の行為を行ってはならないものとします。
+          <ul>
+            <li>公序良俗に反する行為、またはその恐れのある行為</li>
+            <li>法令、条例、または本規約に違反する行為</li>
+            <li>他の会員、運営側、または第三者の財産、プライバシー、名誉、信用を侵害する行為（誹謗中傷や迷惑行為など）</li>
+            <li>営利目的、商業目的の宣伝、強引な勧誘、または宗教・政治活動への過度な勧誘行為</li>
+            <li>運営側のボランティア活動を妨害する行為、または運営側に不当な負担をかける行為</li>
+          </ul>
+        </li>
+        <li>
+          <strong>利用制限および登録抹消</strong><br>
+          会員が上記の禁止事項に違反した場合、または公序良俗に反する行為を行ったと推測されると運営側が判断した場合、運営側は事前の通知なしに、該当する投稿の削除、サービスの利用停止、または会員登録の抹消（強制退会）を行うことができるものとします。
+        </li>
+      </ol>
+    </div>
+    <label class="disc-check-row">
+      <input type="checkbox" id="disc-check">
+      上記の免責事項および注意事項をすべて読み、同意します
+    </label>
+    <button id="disc-agree-btn" disabled>同意して入室する</button>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════════
      ログイン画面
 ══════════════════════════════════════════════════════════════════ -->
@@ -1057,6 +1163,37 @@ canvas#world { display: block; }
 ══════════════════════════════════════════════════════════════════ -->
 <script>
 "use strict";
+// ══════════════════════════════════════════════════════════════════
+//  免責事項モーダル（初回のみ表示）
+// ══════════════════════════════════════════════════════════════════
+(function() {
+  const AGREED_KEY = "konnitiwa_agreed_v1";
+  const modal = document.getElementById("disclaimer-modal");
+  const check = document.getElementById("disc-check");
+  const btn   = document.getElementById("disc-agree-btn");
+
+  // 同意済みならすぐ非表示
+  if (localStorage.getItem(AGREED_KEY) === "1") {
+    modal.classList.add("hidden");
+    return;
+  }
+
+  // 初回：表示
+  modal.classList.remove("hidden");
+
+  // チェックボックスでボタン有効化
+  check.addEventListener("change", () => {
+    btn.disabled = !check.checked;
+  });
+
+  // 同意ボタン
+  btn.addEventListener("click", () => {
+    if (!check.checked) return;
+    localStorage.setItem(AGREED_KEY, "1");
+    modal.classList.add("hidden");
+  });
+})();
+
 // ══════════════════════════════════════════════════════════════════
 //  設定定数
 // ══════════════════════════════════════════════════════════════════
