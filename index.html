@@ -744,6 +744,54 @@ canvas#world { display: block; }
 ══════════════════════════════════════════════════════════════════ */
 
 
+/* ── 送信先選択リスト（通話・名刺共通） ── */
+.recipient-section {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.recipient-header {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: .75rem; color: var(--text-dim);
+}
+.recipient-select-all {
+  font-size: .72rem; padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.04);
+  color: var(--text-dim); cursor: pointer;
+  transition: background .15s;
+}
+.recipient-select-all:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+.recipient-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 180px; overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px;
+  background: rgba(0,0,0,0.15);
+}
+.recipient-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.recipient-item:hover { background: rgba(255,255,255,0.06); }
+.recipient-item input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--chochin2);
+  cursor: pointer; flex-shrink: 0;
+}
+.recipient-avatar { font-size: 1.4rem; flex-shrink: 0; }
+.recipient-info   { flex: 1; }
+.recipient-nick   { font-size: .85rem; font-weight: 700; color: var(--text); }
+.recipient-dist   { font-size: .68rem; color: var(--text-dim); margin-top: 1px; }
+.recipient-empty  {
+  text-align: center; color: var(--text-dim);
+  font-size: .82rem; padding: 16px 0;
+}
+
 /* ── 通話モーダル ── */
 
 
@@ -1063,9 +1111,6 @@ canvas#world { display: block; }
   <div id="call-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <h2>📞 通話に招待する <button class="modal-close" id="call-modal-close">✕</button></h2>
-      <div style="font-size:.78rem;color:var(--text-dim)">
-        Zoom・Google Meet・LINE等のURLを近くの人（400px以内）全員に送ります
-      </div>
       <div>
         <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px">サービスを選択</div>
         <div class="sns-platform-grid" id="call-plt-grid"></div>
@@ -1077,8 +1122,16 @@ canvas#world { display: block; }
       <div id="call-preview" style="display:none;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:.85rem;color:var(--text)">
         📞 <span id="call-preview-text"></span>
       </div>
+      <!-- 送信先選択 -->
+      <div class="recipient-section">
+        <div class="recipient-header">
+          <span>📍 送り先を選択（400px以内）</span>
+          <button class="recipient-select-all" id="call-select-all">全員選択</button>
+        </div>
+        <div class="recipient-list" id="call-recipient-list"></div>
+      </div>
       <button class="btn-enter" id="call-invite-send" style="font-size:.95rem;padding:12px">
-        📨 招待を送る
+        📨 選んだ人に招待を送る
       </button>
     </div>
   </div>
@@ -1087,15 +1140,10 @@ canvas#world { display: block; }
   <div id="sns-modal" class="modal-overlay hidden">
     <div class="modal-card">
       <h2>📇 SNS名刺を渡す <button class="modal-close" id="sns-close">✕</button></h2>
-      <div style="font-size:.78rem;color:var(--text-dim)">
-        近くにいる人（400px以内）全員に届きます
-      </div>
 
       <!-- プラットフォーム選択 -->
       <div>
-        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px">
-          SNSを選択
-        </div>
+        <div style="font-size:.75rem;color:var(--text-dim);margin-bottom:10px">SNSを選択</div>
         <div class="sns-platform-grid" id="sns-plt-grid"></div>
       </div>
 
@@ -1110,8 +1158,17 @@ canvas#world { display: block; }
         📇 <span id="sns-preview-text"></span>
       </div>
 
+      <!-- 送信先選択 -->
+      <div class="recipient-section">
+        <div class="recipient-header">
+          <span>📍 送り先を選択（400px以内）</span>
+          <button class="recipient-select-all" id="sns-select-all">全員選択</button>
+        </div>
+        <div class="recipient-list" id="sns-recipient-list"></div>
+      </div>
+
       <button class="btn-enter" id="sns-send" style="font-size:.95rem;padding:12px">
-        📤 名刺を渡す
+        📤 選んだ人に名刺を渡す
       </button>
     </div>
   </div>
@@ -2424,11 +2481,65 @@ function updateCallPreview() {
 
 document.getElementById("call-url-inp")?.addEventListener("input", updateCallPreview);
 
+// ── 近くにいる人リストを構築（通話・名刺共通）────────────────────
+function buildRecipientList(listId, selectAllId) {
+  const list = document.getElementById(listId);
+  list.innerHTML = "";
+
+  const nearby = [];
+  others.forEach((p, id) => {
+    const dist = Math.hypot(p.x - myX, p.y - myY);
+    if (dist <= 400) nearby.push({ ...p, dist });
+  });
+  nearby.sort((a, b) => a.dist - b.dist);
+
+  if (nearby.length === 0) {
+    list.innerHTML = `<div class="recipient-empty">
+      近くに人がいません<br>
+      <small>400px以内に近づいてください</small>
+    </div>`;
+    document.getElementById(selectAllId).style.display = "none";
+    return;
+  }
+
+  document.getElementById(selectAllId).style.display = "";
+
+  nearby.forEach(p => {
+    const item = document.createElement("label");
+    item.className = "recipient-item";
+    item.innerHTML = `
+      <input type="checkbox" class="recipient-cb" data-id="${p.id}" checked>
+      <div class="recipient-avatar">${p.avatar || "👤"}</div>
+      <div class="recipient-info">
+        <div class="recipient-nick">${clientSanitize(p.nick, 16)}</div>
+        <div class="recipient-dist">距離 ${Math.floor(p.dist)}px</div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+
+  // 全員選択ボタン
+  document.getElementById(selectAllId).addEventListener("click", () => {
+    const cbs = list.querySelectorAll(".recipient-cb");
+    const allChecked = [...cbs].every(cb => cb.checked);
+    cbs.forEach(cb => cb.checked = !allChecked);
+    document.getElementById(selectAllId).textContent = allChecked ? "全員選択" : "全員解除";
+  }, { once: true });
+}
+
+// ── 選択されたIDリストを取得 ─────────────────────────────────────
+function getSelectedIds(listId) {
+  return [...document.querySelectorAll(`#${listId} .recipient-cb`)]
+    .filter(cb => cb.checked)
+    .map(cb => cb.dataset.id);
+}
+
 function openCallModal() {
   modalOpen = true;
   pressedKeys.clear();
   vpadKeys.clear();
   buildCallModal();
+  buildRecipientList("call-recipient-list", "call-select-all");
   document.getElementById("call-modal").classList.remove("hidden");
 }
 function closeCallModal() {
@@ -2451,14 +2562,21 @@ document.getElementById("call-invite-send").addEventListener("click", () => {
     return;
   }
   if (!ws || ws.readyState !== 1) { showToast("⚠️ 接続中ではありません"); return; }
+
+  const selectedIds = getSelectedIds("call-recipient-list");
+  if (selectedIds.length === 0) {
+    showToast("⚠️ 送り先を選択してください");
+    return;
+  }
+
   ws.send(JSON.stringify({
     type:  "call_invite",
     label: `${selectedCallPlt.icon} ${selectedCallPlt.label}`,
     url,
+    to:    selectedIds,   // 送り先IDリスト
   }));
   closeCallModal();
-  showToast(`📨 ${selectedCallPlt.label} の招待を送りました！`);
-  // 自分もURLを開く
+  showToast(`📨 ${selectedIds.length}人に ${selectedCallPlt.label} の招待を送りました！`);
   window.open(url, "_blank", "noopener,noreferrer");
 });
 
@@ -2545,6 +2663,7 @@ function openSNSModal() {
   pressedKeys.clear();
   vpadKeys.clear();
   buildSNSModal();
+  buildRecipientList("sns-recipient-list", "sns-select-all");
   document.getElementById("sns-modal").classList.remove("hidden");
 }
 function closeSNSModal() {
@@ -2571,14 +2690,21 @@ document.getElementById("sns-send").addEventListener("click", () => {
     showToast("⚠️ 接続中ではありません");
     return;
   }
+
+  const selectedIds = getSelectedIds("sns-recipient-list");
+  if (selectedIds.length === 0) {
+    showToast("⚠️ 送り先を選択してください");
+    return;
+  }
+
   ws.send(JSON.stringify({
     type:  "sns_card",
     label: `${selectedSNS.icon} ${selectedSNS.label}`,
     url,
+    to:    selectedIds,  // 送り先IDリスト
   }));
   closeSNSModal();
-  showToast(`📤 ${selectedSNS.label} の名刺を渡しました！`);
-  // GAS記録
+  showToast(`📤 ${selectedIds.length}人に ${selectedSNS.label} の名刺を渡しました！`);
   gasLog({
     action: "chat_log", user_id: gasUserId,
     nick: myNick, avatar: myAvatar,
