@@ -1593,10 +1593,8 @@ function _doConnect() {
         newIds.add(p.id);
         const prev = others.get(p.id);
         if (prev) {
-          // 1snapshotあたりの最大移動距離を制限（急なジャンプを防ぐ）
-          // サーバーtick=50ms、速度=最大9px/frame×60fps = 540px/sec
-          // 50ms間の最大移動量 = 約27px → 余裕を持って60pxを上限に
-          const MAX_STEP = 60;
+          // NPCは瞬間移動あり→制限なし、プレイヤーは60px/tick制限
+          const MAX_STEP = p.isNpc ? Infinity : 60;
           const dx = p.x - prev.x;
           const dy = p.y - prev.y;
           const dist = Math.hypot(dx, dy);
@@ -1613,11 +1611,12 @@ function _doConnect() {
           prev.avatar  = p.avatar;
           prev.title   = p.title;
           prev.hobbies = p.hobbies;
+          prev.isNpc   = !!p.isNpc;
           // サーバーの真の座標も保持（次フレームの追従用）
           prev.serverX = p.x;
           prev.serverY = p.y;
         } else {
-          others.set(p.id, { ...p, serverX: p.x, serverY: p.y });
+          others.set(p.id, { ...p, isNpc: !!p.isNpc, serverX: p.x, serverY: p.y });
         }
       });
 
@@ -1628,11 +1627,10 @@ function _doConnect() {
     }
 
     if (m.type === "chat") {
-      // サーバーは from: id で送信。othersの最新座標を使う
       const sender = others.get(m.from);
       const cx = sender ? sender.x : m.x;
       const cy = sender ? sender.y : m.y;
-      spawnBubble(m.from, m.nick, m.avatar, m.text);
+      spawnBubble(m.from, m.nick, m.avatar, m.text, !!m.isNpc);
     }
 
     // SNS名刺受信
@@ -1971,19 +1969,15 @@ function clientSanitize(s, maxLen) {
     .slice(0, maxLen);
 }
 
-function spawnBubble(id, nick, avatar, text) {
-  // 同じ id の古い吹き出しを削除
+function spawnBubble(id, nick, avatar, text, isNpc = false) {
   const old = bubbles.findIndex(b => b.id === id);
-  if (old !== -1) {
-    bubbles[old].el.remove();
-    bubbles.splice(old, 1);
-  }
+  if (old !== -1) { bubbles[old].el.remove(); bubbles.splice(old, 1); }
   const el = document.createElement("div");
   el.className = "bubble";
-  el.textContent = `${avatar} ${clientSanitize(nick,16)}: ${clientSanitize(text,60)}`;
-  // 最初のフレームで左上に見えないよう画面外に置く
+  el.textContent = `${avatar} ${clientSanitize(nick,16)}: ${clientSanitize(text,100)}`;
   el.style.left = "-9999px";
   el.style.top  = "-9999px";
+  if (isNpc) el.dataset.npc = "1";
   document.getElementById("bubbles").appendChild(el);
   bubbles.push({ el, id, born: performance.now() });
 }
@@ -2132,7 +2126,7 @@ function draw(vw, vh, now) {
                 : dist < CFG.NICK_SHOW  ? 1 - (dist - CFG.NICK_FULL) / (CFG.NICK_SHOW - CFG.NICK_FULL)
                 : 0;
     drawAvatar(sx, sy, p.avatar, p.nick, alpha, false,
-               { title: p.title || "", hobbies: p.hobbies || [] });
+               { title: p.title || "", hobbies: p.hobbies || [] }, !!p.isNpc);
   });
   // 自分
   drawAvatar(myX - camX, myY - camY, myAvatar, myNick, 1, true, myProfile);
@@ -2155,33 +2149,56 @@ function draw(vw, vh, now) {
     const sy = Math.round(wy - camY);
     const fadeStart = CFG.BUBBLE_TTL * 0.7;
     const alpha = age > fadeStart ? 1-(age-fadeStart)/(CFG.BUBBLE_TTL-fadeStart) : 1;
-    const text = b.el.textContent;
+    const text  = b.el.textContent;
+    const isNpc = b.el.dataset.npc === "1";
+    const fsize = 13;
     ctx.save();
-    ctx.font = "13px sans-serif";
+    ctx.font = `${isNpc ? "bold " : ""}${fsize}px sans-serif`;
     ctx.globalAlpha = alpha;
+
     const PAD=10, tw=ctx.measureText(text).width, bw=tw+PAD*2, bh=13+PAD*2;
     let bx = sx - bw/2;
     let by = sy - CFG.PLAYER_R - bh - 32;
     bx = Math.max(4, Math.min(vw-bw-4, bx));
     if (by < 60) by = sy + CFG.PLAYER_R + 10;
-    ctx.fillStyle="rgba(14,18,24,0.92)"; ctx.strokeStyle="rgba(240,200,74,0.8)"; ctx.lineWidth=1.5;
+
+    // NPC：金色背景・通常：暗い背景
+    if (isNpc) {
+      ctx.fillStyle   = "rgba(60,40,0,0.95)";
+      ctx.strokeStyle = "rgba(240,200,74,1.0)";
+    } else {
+      ctx.fillStyle   = "rgba(14,18,24,0.92)";
+      ctx.strokeStyle = "rgba(240,200,74,0.8)";
+    }
+    ctx.lineWidth = isNpc ? 2 : 1.5;
     ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill(); ctx.stroke();
-    ctx.fillStyle="#f4efe6"; ctx.textBaseline="middle"; ctx.textAlign="left";
+    ctx.fillStyle = isNpc ? "#f0c84a" : "#f4efe6";
+    ctx.textBaseline="middle"; ctx.textAlign="left";
     ctx.fillText(text, bx+PAD, by+bh/2);
     ctx.restore();
   });
 }
 
 // アバター1体を描画
-function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
+function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile, isNpc = false) {
   const r = CFG.PLAYER_R * (isSelf ? 1.15 : 1);
 
   ctx.save();
 
-  // 影光彩 + 円背景
-  ctx.shadowColor = isSelf ? "rgba(232,146,74,0.8)" : "rgba(74,150,230,0.5)";
-  ctx.shadowBlur  = isSelf ? 18 : 10;
-  ctx.fillStyle   = isSelf ? "rgba(232,146,74,0.25)" : "rgba(44,74,124,0.35)";
+  // 影光彩：NPC=金色・自分=オレンジ・他=青
+  if (isNpc) {
+    ctx.shadowColor = "rgba(240,200,74,0.9)";
+    ctx.shadowBlur  = 20;
+    ctx.fillStyle   = "rgba(80,60,0,0.4)";
+  } else if (isSelf) {
+    ctx.shadowColor = "rgba(232,146,74,0.8)";
+    ctx.shadowBlur  = 18;
+    ctx.fillStyle   = "rgba(232,146,74,0.25)";
+  } else {
+    ctx.shadowColor = "rgba(74,150,230,0.5)";
+    ctx.shadowBlur  = 10;
+    ctx.fillStyle   = "rgba(44,74,124,0.35)";
+  }
   ctx.beginPath();
   ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
   ctx.fill();
@@ -2197,8 +2214,20 @@ function drawAvatar(sx, sy, emoji, nick, nickAlpha, isSelf, profile) {
   ctx.fillStyle    = "#fff";
   ctx.fillText(emoji, sx, sy);
 
-  // 自分の枠（提灯オレンジ）
-  if (isSelf) {
+  // NPC枠（金色）・自分の枠（オレンジ）
+  if (isNpc) {
+    ctx.strokeStyle = "rgba(240,200,74,0.95)";
+    ctx.lineWidth   = 2.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+    ctx.stroke();
+    // NPCマーク（★）
+    ctx.font = "9px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#f0c84a";
+    ctx.fillText("AI", sx, sy - r - 10);
+  } else if (isSelf) {
     ctx.strokeStyle = "rgba(232,146,74,0.8)";
     ctx.lineWidth   = 2.5;
     ctx.beginPath();
